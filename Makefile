@@ -1,0 +1,36 @@
+.PHONY: dev-setup dev-infra dev-infra-down dev-infra-clean dev-all dev-clean check-infra-ports check-docker dev-k8s dev-k8s-down help
+
+dev-setup: dev-infra ## One-time bootstrap - bring up infra, ready to start building
+	@echo "Infra is up (Redis, Postgres). Run 'nix develop' (or let direnv load it) to get the toolchain."
+
+dev-infra: check-docker check-infra-ports ## Bring up infra only (Redis, Postgres), no services
+	docker compose -f docker-compose.dev.yml up -d --wait
+
+dev-infra-down: ## Stop infra, keep volumes
+	docker compose -f docker-compose.dev.yml down
+
+dev-infra-clean: ## Stop infra and wipe its volumes
+	docker compose -f docker-compose.dev.yml down -v
+
+dev-all: dev-infra ## Bring up infra plus every service and the frontend dev server
+	@echo "No services are scaffolded yet (see docs/ROADMAP.md, Phase 3)."
+	@echo "Once services exist under services/<name>/cmd, this target will start them alongside infra."
+
+dev-clean: dev-infra-clean ## Full teardown - infra, volumes, everything dev-setup created
+
+check-infra-ports: ## Warn if Redis/Postgres host ports are already taken before bringing infra up
+	@./scripts/check-infra-ports.sh
+
+check-docker: ## Verify Docker is installed and its daemon is reachable
+	@./scripts/check-docker.sh
+
+dev-k8s: check-docker ## Start the local K8s dev loop (Kind cluster + Tilt: Redis, Postgres, observability)
+	kind get clusters | grep -qx matchflow || kind create cluster --name matchflow --config k8s/local/kind-config.yaml
+	tilt up
+
+dev-k8s-down: ## Tear down the local K8s dev loop (Tilt resources + delete the Kind cluster)
+	tilt down
+	kind delete cluster --name matchflow
+
+help: ## Show this help
+	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'

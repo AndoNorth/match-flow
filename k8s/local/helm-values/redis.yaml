@@ -1,0 +1,54 @@
+# bitnami/redis, standalone (no cluster/replication - matches
+# docker-compose.dev.yml's single Redis instance, no HA needed for a
+# 2-dev local loop).
+#
+# Bitnami gates its actively-maintained images behind a subscription as
+# of 2025; the free/community images moved to the `bitnamilegacy/*`
+# repository and need `allowInsecureImages: true` or the chart's default
+# `image.repository` 404s. Same fix applies to any other Bitnami chart
+# pulled into this repo later.
+architecture: standalone
+
+auth:
+  enabled: false
+
+image:
+  registry: docker.io
+  repository: bitnamilegacy/redis
+  tag: "7.4-debian-12"
+
+global:
+  security:
+    allowInsecureImages: true
+
+# The chart's own default commonConfiguration unconditionally loads
+# RedisSearch/RedisJSON modules (loadmodule .../redisearch.so,
+# .../rejson.so) - those .so files ship only in Bitnami's paid Secure
+# Image tier, not the free bitnamilegacy image above, so Redis aborts
+# on startup and crash-loops. Override with the same config minus the
+# module lines - we don't use search/JSON modules anyway.
+#
+# Worth reconsidering later: the official Valkey chart
+# (valkey.io/valkey-helm, protocol-compatible Redis fork, Linux
+# Foundation-maintained) sidesteps this whole class of problem - no
+# paywalled registry, no bundled modules to fight. Not switching now
+# (this works), but if Bitnami's gating gets more restrictive, that's
+# the first place to look rather than chasing another commonConfiguration
+# override.
+commonConfiguration: |-
+  appendonly yes
+  save ""
+
+master:
+  persistence:
+    enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+metrics:
+  enabled: false

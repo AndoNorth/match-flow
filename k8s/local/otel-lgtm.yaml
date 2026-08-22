@@ -1,0 +1,56 @@
+# Public image (hub.docker.com/r/grafana/otel-lgtm). Bundles an OTel
+# collector, Prometheus, Loki, Tempo, Pyroscope, and Grafana in one
+# container. Local-dev substitute for the full separate
+# Grafana/Loki/Mimir/Alloy(/Pyroscope) stack in TECH_STACK.md - services
+# only need to speak OTLP (or push/expose pprof for profiling) either
+# way, so swapping the collector for Alloy and Prometheus for Mimir
+# later (Phase 6, see ROADMAP.md) doesn't change service code.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-lgtm
+  labels:
+    app: otel-lgtm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-lgtm
+  template:
+    metadata:
+      labels:
+        app: otel-lgtm
+    spec:
+      containers:
+        - name: otel-lgtm
+          image: grafana/otel-lgtm:latest
+          ports:
+            - name: grafana
+              containerPort: 3000
+            - name: otlp-grpc
+              containerPort: 4317
+            - name: otlp-http
+              containerPort: 4318
+            - name: pyroscope
+              containerPort: 4040
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-lgtm
+spec:
+  selector:
+    app: otel-lgtm
+  ports:
+    - name: grafana
+      port: 3000
+      targetPort: 3000
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+    - name: pyroscope
+      port: 4040
+      targetPort: 4040

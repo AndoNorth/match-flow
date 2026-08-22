@@ -1,0 +1,38 @@
+name: matchflow
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: matchflow
+      POSTGRES_PASSWORD: matchflow
+      POSTGRES_DB: matchflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Public image (hub.docker.com/r/grafana/otel-lgtm). Bundles an OTel
+  # collector, Prometheus, Loki, Tempo, Pyroscope, and Grafana in one
+  # container - local-dev substitute for the full separate
+  # Grafana/Loki/Mimir/Alloy(/Pyroscope) stack in docs/TECH_STACK.md.
+  # Services send OTLP to 4317/4318 and push/pull profiles via Pyroscope
+  # on 4040; Grafana UI is on 3000.
+  otel-lgtm:
+    image: grafana/otel-lgtm:latest
+    ports:
+      - "3000:3000"
+      - "4317:4317"
+      - "4318:4318"
+      - "4040:4040"
+
+volumes:
+  redisdata:
+  pgdata:

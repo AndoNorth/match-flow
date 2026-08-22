@@ -1,0 +1,47 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    # Correctness / bugs
+    - errcheck
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - bodyclose
+    - forcetypeassert
+
+    # Security
+    - gosec
+
+    # Error-handling discipline
+    - wrapcheck
+
+    # Style / consistency
+    - lll
+    - mnd
+
+    # Ginkgo/Gomega-specific (see TECH_STACK.md, Testing) - harmless on
+    # non-Ginkgo code, so enabling it now costs nothing.
+    - ginkgolinter
+
+  settings:
+    govet:
+      enable:
+        # Flags composite literals using unkeyed fields (e.g.
+        # Point{1, 2} instead of Point{X: 1, Y: 2}) - fragile the moment
+        # a struct's field order ever changes, whether by hand or by a
+        # tool. Standard analysis pass, no custom tooling needed.
+        - composites
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+issues:
+  exclude-dirs:
+    - node_modules
+    - .direnv
+    - .worktrees

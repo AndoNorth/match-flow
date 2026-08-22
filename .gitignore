@@ -1,0 +1,51 @@
+# Go build artifacts
+/bin
+*.test
+*.out
+
+# Node / Next.js
+node_modules
+.next
+out
+*.tsbuildinfo
+.turbo
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs
+
+# Runtime / temp
+tmp
+temp
+*.pid
+
+# Test/coverage output
+coverage
+test-results
+playwright-report
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Editor dirs
+.vscode
+.idea
+
+# Nix / direnv
+result
+result-*
+.direnv
+.pre-commit-config.yaml
+
+# Git worktrees
+.worktrees
+
+# Tilt / K8s local dev
+.tiltbuild
+tilt_modules

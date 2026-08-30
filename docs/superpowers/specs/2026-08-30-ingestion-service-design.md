@@ -28,10 +28,13 @@ normalizes, and distributes them."
 - Both `ProviderA` and `ProviderB` wire shapes normalize to one identical
   canonical event (same `MatchID`/`Sequence`/`Type`/`Timestamp`/`Payload`),
   regardless of which shape arrived.
-- Malformed core fields (missing/invalid `MatchID`, `Sequence`, `Type`,
-  unparseable timestamp) are rejected with `400` - no silent coercion.
-  `Payload` stays an opaque, unvalidated map (sport-specific, not this
-  service's concern).
+- Malformed core fields are rejected, no silent coercion - using Huma's
+  own default status codes rather than fighting them: unparseable JSON
+  or an unparseable timestamp is `400 Bad Request`; a well-formed JSON
+  body that fails schema validation (missing `MatchID`, wrong-typed
+  `Sequence`, empty `Type`) is `422 Unprocessable Entity`. `Payload`
+  stays an opaque, unvalidated map (sport-specific, not this service's
+  concern).
 - Every normalized event is published to a single Redis pub/sub channel.
 - Feed Simulator's `Runner` is updated to POST each event to Ingestion
   (alongside its existing logging, not instead of it), proving the real
@@ -108,13 +111,16 @@ deterministically), so it can POST to the matching route directly:
 - `POST /events/provider-b` - decodes `ProviderB`'s flat shape
   (`match_id`, `sequence`, `event_type`, `occurred_at`, `details`).
 
-**Huma owns validation, exclusively.** Two typed Huma request structs (one
-per route) carry `required`/type validation tags for `MatchID`,
-`Sequence`, `Type`, and the timestamp field - Huma's own schema
-validation rejects malformed input with `400` before the handler runs.
-`internal/normalize` never rejects anything; it only runs on input Huma
-has already accepted. This is also where the two providers' differing
-timestamp wire formats are pinned down explicitly:
+**Huma owns validation, exclusively - using its own default status
+codes, not a fixed `400` everywhere.** Two typed Huma request structs
+(one per route) carry `required`/type validation tags for `MatchID`,
+`Sequence`, `Type`, and the timestamp field. Huma rejects a body it
+can't even parse as JSON with `400 Bad Request`; a body that parses but
+fails schema validation (missing/wrong-typed field) gets Huma's own
+`422 Unprocessable Entity`. `internal/normalize` never rejects anything;
+it only runs on input Huma has already accepted. This is also where the
+two providers' differing timestamp wire formats are pinned down
+explicitly:
 
 - `ProviderA`'s request struct: `TS int64` (Unix seconds - matches
   `providers.go`'s `e.Timestamp.Unix()` encoding).
@@ -187,13 +193,15 @@ events; Ingestion being briefly down shouldn't kill the generator).
   exercised.
 - **Integration** (`//go:build integration`, testcontainers-go spinning a
   fresh Redis per run - independent of `make dev-infra` being up): POST
-  both a valid payload and each required-field rejection case (missing
-  `MatchID`, bad `Sequence`, empty `Type`, malformed timestamp) to both
-  routes against a real HTTP server. Valid payloads assert the canonical
-  event arrives on the subscribed Redis channel; malformed payloads
-  assert Huma's `400` response and that nothing was published. This is
-  the contract proof - request validation, normalization, and the Redis
-  hop together, not mocked.
+  a valid payload, a schema-invalid payload (missing `MatchID`, bad
+  `Sequence`, empty `Type`), and an unparseable-timestamp payload, to
+  both routes against a real HTTP server. Valid payloads assert the
+  canonical event arrives on the subscribed Redis channel; schema-invalid
+  payloads assert Huma's `422 Unprocessable Entity`; unparseable-JSON or
+  unparseable-timestamp payloads assert `400 Bad Request`. All rejection
+  cases also assert nothing was published. This is the contract proof -
+  request validation, normalization, and the Redis hop together, not
+  mocked.
 - Feed Simulator's `Runner` gets a unit spec asserting it POSTs to the
   correct route per encoder in the alternation, using an injected
   `httptest.Server` double - no real Ingestion process needed for this

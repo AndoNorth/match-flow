@@ -70,13 +70,14 @@ alternative, and resource estimates:
 ├── Tiltfile                 # local K8s dev loop orchestration
 ├── docker-compose.dev.yml   # local Docker Compose dev loop
 ├── flake.nix                # Nix dev shell + git hooks
-├── services/                # Go services (none scaffolded yet)
+├── services/                # Go services (feed-simulator scaffolded so far)
 └── frontend/                # Next.js client application
 ```
 
-Neither `services/` nor `frontend/` has anything under it yet, and the
-service names/boundaries aren't locked in - [ARCHITECTURE.md](docs/ARCHITECTURE.md)
-describes responsibilities, not directory names.
+`frontend/` doesn't have anything under it yet, and the service
+names/boundaries aren't all locked in - only `services/feed-simulator/`
+exists so far - [ARCHITECTURE.md](docs/ARCHITECTURE.md) describes
+responsibilities, not directory names.
 
 The internal shape of each Go service **is** locked in, though - standard
 Go project layout, every service the same way:

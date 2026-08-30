@@ -77,6 +77,6 @@ var _ = Describe("Football", func() {
 				break
 			}
 		}
-		Expect(found).To(BeTrue(), "expected at least one odds_update in 44 ticks with seed 4")
+		Expect(found).To(BeTrue(), "expected at least one odds_update in 44 ticks with seed 5")
 	})
 })

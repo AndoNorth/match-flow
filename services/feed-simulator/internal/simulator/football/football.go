@@ -63,6 +63,15 @@ func (f *Football) NextEvent(state domain.MatchState) (domain.DomainEvent, bool,
 			},
 		}, true, false
 
+	case f.rng.Float64() < 0.01: //nolint:mnd // 1% card probability per tick
+		return domain.DomainEvent{
+			Type: EventCard,
+			Payload: map[string]any{
+				"team":   f.pickTeam(),
+				"minute": state.ClockMins,
+			},
+		}, true, false
+
 	default:
 		return domain.DomainEvent{}, false, false
 	}

@@ -13,9 +13,10 @@ import (
 // generator/encoder/logging behavior lives - main.go only constructs a
 // Runner and calls Run.
 type Runner struct {
-	engine   *domain.MatchEngine
-	logger   *slog.Logger
-	encoders []providers.Encoder
+	engine       *domain.MatchEngine
+	logger       *slog.Logger
+	encoders     []providers.Encoder
+	emittedCount int
 }
 
 func NewRunner(engine *domain.MatchEngine, encoders []providers.Encoder, logger *slog.Logger) *Runner {
@@ -30,7 +31,8 @@ func (r *Runner) Run(ctx context.Context) {
 	events := r.engine.Run(ctx)
 
 	for event := range events {
-		encoder := r.encoders[event.Sequence%len(r.encoders)]
+		encoder := r.encoders[r.emittedCount%len(r.encoders)]
+		r.emittedCount++
 
 		payload, err := encoder(event)
 		if err != nil {
@@ -41,5 +43,9 @@ func (r *Runner) Run(ctx context.Context) {
 		r.logger.Info("event", "provider_payload", string(payload))
 	}
 
+	if ctx.Err() != nil {
+		r.logger.Info("generator canceled")
+		return
+	}
 	r.logger.Info("match_complete")
 }

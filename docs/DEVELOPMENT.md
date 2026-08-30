@@ -91,15 +91,15 @@ Each service is expected to expose a consistent set of Makefile targets,
 so switching between services doesn't require relearning a workflow.
 At minimum, expect:
 
-- `make build` - build the service
-- `make run` - run the service locally (with live reload where applicable)
-- `make test` - run the service's automated tests
-- `make lint` - run linting/static analysis
+- `make build SVC=<name>` - build the service
+- `make run SVC=<name>` - run the service locally with Air hot-reload
+- `make test SVC=<name>` - run the service's unit tests
+- `make test-integration SVC=<name>` - run its integration tests (adds
+  `-tags=integration`, requires Docker)
+- `make lint SVC=<name>` - run linting/static analysis
 
 Repo-wide Makefile targets are expected to orchestrate these across all
 services (e.g. `make test` at the root running every service's tests).
-Per-service `build`/`run`/`test`/`lint` don't exist yet - no services are
-scaffolded (Phase 3, see [ROADMAP.md](ROADMAP.md)).
 
 A small set of environment-lifecycle targets is already in place
 (`Makefile`, `docker-compose.dev.yml`):
@@ -110,8 +110,8 @@ A small set of environment-lifecycle targets is already in place
   Docker Compose, without starting any services
 - `make dev-infra-down` / `make dev-infra-clean` - stop infra, or stop
   and wipe its volumes
-- `make dev-all` - bring up infra; once services exist under
-  `services/<name>/cmd`, this also starts them (and the frontend dev
+- `make dev-all` - bring up infra; now that feed-simulator exists under
+  `services/<name>/cmd`, this also starts it (and the frontend dev
   server) together - for now it just brings up infra and says so
 - `make dev-clean` - full teardown (infra + volumes)
 - `make check-infra-ports` - warn if Redis/Postgres host ports are

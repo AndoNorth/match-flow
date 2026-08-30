@@ -41,7 +41,7 @@ func main() {
 	go runner.Run(ctx)
 
 	mux := http.NewServeMux()
-	mux.Handle("/healthz", healthz.Handler())
+	mux.Handle("GET /healthz", healthz.Handler())
 
 	port := os.Getenv("PORT")
 	if port == "" {

@@ -178,6 +178,19 @@ so it would be the wrong tool for this check at any phase.
 - Exact channel name (`matchflow:events` used as a placeholder above) -
   pick during implementation, not load-bearing enough to block this spec.
 
+## Out of Scope
+
+- **Config-driven provider decoding.** Discussed and deferred: a data
+  file pairing an emulated provider shape to a decoding path, so adding a
+  third external-provider wire format wouldn't require a code change.
+  Real future win, but no third provider exists or is planned, and it's
+  a separate axis from supporting a new sport - sport/domain vocabulary
+  is already pluggable via the `domain.Sport` interface (a new package
+  per sport), independent of how a provider's payload is physically
+  encoded. Two hardcoded provider shapes (typed Huma request structs
+  mirroring `ProviderA`/`ProviderB`) are enough for now; revisit
+  config-driven decoding only if/when a real third shape shows up.
+
 ## References
 
 - [docs/ARCHITECTURE.md#ingestion-service](../../ARCHITECTURE.md#ingestion-service)

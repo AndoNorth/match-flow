@@ -3,15 +3,14 @@
 > Two interchangeable local loops exist: Docker Compose and Kind/Tilt
 > (K8s). Same Redis/Postgres credentials, same ports, same
 > `otel-lgtm` observability bundle either way - pick whichever fits the
-> task, or run only one. Neither runs application code yet (no service
-> is scaffolded - Phase 3, see [ROADMAP.md](ROADMAP.md)).
+> task, or run only one. Neither loop starts application code itself -
+> services are run separately, see [3. Run a service](#3-run-a-service)
+> below.
 
 This chains together what already exists in the repo (`Makefile`,
 `flake.nix`, `docker-compose.dev.yml`, `Tiltfile`) into one first-time
-walkthrough. It's intentionally short right now - there's no service
-code yet, so there isn't much to chain. Expect this doc to grow a step
-at a time as each phase in [ROADMAP.md](ROADMAP.md) lands, rather than
-all at once.
+walkthrough. Expect it to grow as more of [ROADMAP.md](ROADMAP.md)
+lands, rather than all at once.
 
 ## Before you start: resource estimates
 
@@ -100,10 +99,10 @@ reports everything healthy.
 
 ## 3. Run a service
 
-Nothing to run yet - no service is scaffolded (Phase 3, see
-[ROADMAP.md](ROADMAP.md)). Once `services/<name>/cmd` exists, this
-section documents `make run SVC=<name>` (Compose loop, Air hot-reload)
-and the Tiltfile addition needed to build/deploy it into the Kind loop.
+`make run SVC=<name>` (Compose loop, Air hot-reload) - see each
+service's own README (linked from the [repo README](../README.md#repository-layout))
+for its env vars and endpoints. The Kind/Tilt loop doesn't build or
+deploy services into the cluster yet.
 
 ## Cleanup
 

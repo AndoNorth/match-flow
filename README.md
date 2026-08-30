@@ -70,13 +70,23 @@ alternative, and resource estimates:
 ├── Tiltfile                 # local K8s dev loop orchestration
 ├── docker-compose.dev.yml   # local Docker Compose dev loop
 ├── flake.nix                # Nix dev shell + git hooks
-├── services/                # Go services (feed-simulator, ingestion-service scaffolded so far)
+├── services/                # Go services
 └── frontend/                # Next.js client application
 ```
 
-`frontend/` doesn't have anything under it yet, and the service
-names/boundaries aren't all locked in - only `services/feed-simulator/`
-and `services/ingestion-service/` exist so far -
+Services scaffolded so far (see
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full 4-service
+design):
+
+- [feed-simulator](services/feed-simulator/README.md) - simulates a
+  third-party sports data provider and submits events to Ingestion
+  Service over HTTP
+- [ingestion-service](services/ingestion-service/README.md) - receives
+  events, validates and normalizes them into one canonical shape, and
+  publishes them to Redis
+
+`frontend/` doesn't have anything under it yet, and service
+names/boundaries beyond these two aren't locked in -
 [ARCHITECTURE.md](docs/ARCHITECTURE.md) describes responsibilities, not
 directory names.
 
@@ -94,10 +104,3 @@ every package that does the actual work. Nothing under `internal/` is
 importable by another service or by `cmd/` of a different service - Go
 enforces that boundary at compile time, which is the point of using it.
 This is decided regardless of what the services end up being named.
-
-## Status
-
-This repository has documentation and local dev tooling (Nix flake,
-Docker Compose infra, git hooks) in place. No application code has been
-implemented yet. See [docs/ROADMAP.md](docs/ROADMAP.md) for the
-build-out plan.

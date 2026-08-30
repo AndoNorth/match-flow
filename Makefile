@@ -13,8 +13,7 @@ dev-infra-clean: ## Stop infra and wipe its volumes
 	docker compose -f docker-compose.dev.yml down -v
 
 dev-all: dev-infra ## Bring up infra plus every service and the frontend dev server
-	@echo "No services are scaffolded yet (see docs/ROADMAP.md, Phase 3)."
-	@echo "Once services exist under services/<name>/cmd, this target will start them alongside infra."
+	@echo "Not implemented yet - run each service individually: make run SVC=<name>"
 
 dev-clean: dev-infra-clean ## Full teardown - infra, volumes, everything dev-setup created
 

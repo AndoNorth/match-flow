@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # gitleaks scans commit history, not just the working tree.
+          fetch-depth: 0
+
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      # nix develop --command (not `nix flake check`): the pre-commit checks
+      # run as sandboxed Nix build derivations with no network, and Go module
+      # resolution (ginkgo/gomega) needs network. `nix develop` is a normal
+      # shell instead, matching how these checks already run locally.
+      - name: Cache Go build/module cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: gofmt (check only)
+        run: |
+          nix develop --command bash -c '
+            out=$(gofmt -l .)
+            if [ -n "$out" ]; then echo "$out"; exit 1; fi
+          '
+
+      - name: golines (check only)
+        run: |
+          nix develop --command golines -l --max-len=120 --tab-len=4 \
+            --shorten-comments --reformat-tags --chain-split-dots .
+
+      - name: betteralign (check only)
+        run: nix develop --command betteralign ./...
+
+      - name: golangci-lint
+        run: nix develop --command golangci-lint run ./...
+
+      - name: govulncheck
+        run: nix develop --command govulncheck ./...
+
+      - name: go test
+        run: nix develop --command go test ./... -count=1
+
+      - name: gitleaks
+        run: nix develop --command gitleaks detect --no-banner

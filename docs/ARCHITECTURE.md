@@ -17,6 +17,32 @@ Feed Simulator -> Ingestion Service -> Redis -> Match Service
                                           Frontend Application
 ```
 
+```mermaid
+flowchart LR
+    FS["Feed Simulator<br/>(Go)"] -- "events (REST/gRPC)" --> ING["Ingestion Service<br/>(Go)"]
+    ING -- "publish" --> REDIS[("Redis<br/>pub/sub")]
+    REDIS -- "subscribe" --> MATCH["Match Service<br/>(Go)"]
+    MATCH -- "read/write" --> PG[("PostgreSQL")]
+    MATCH -- "gRPC" --> GW["Gateway Service<br/>(Go)"]
+    GW -- "REST (initial/on-demand)" --> FE["Frontend Application<br/>(Next.js/React/TS)"]
+    GW -- "SSE (realtime push)" --> FE
+
+    FS -.->|OTel| OBS
+    ING -.->|OTel| OBS
+    MATCH -.->|OTel| OBS
+    GW -.->|OTel| OBS
+    OBS[("otel-lgtm<br/>Grafana/Loki/Mimir/Tempo/Pyroscope")]
+
+    classDef svc fill:#1e293b,stroke:#64748b,color:#e2e8f0;
+    classDef infra fill:#0f172a,stroke:#38bdf8,color:#e2e8f0;
+    class FS,ING,MATCH,GW,FE svc;
+    class REDIS,PG,OBS infra;
+```
+
+Frontend never talks directly to Match Service, Ingestion Service, or
+Redis - only through the Gateway. Dashed lines are cross-cutting
+observability (Phase 6), not the request path.
+
 ## Services
 
 ### Feed Simulator

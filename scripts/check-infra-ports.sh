@@ -12,7 +12,11 @@ if [ -n "${SKIP_INFRA_PORT_CHECK:-}" ]; then
   exit 0
 fi
 
-PORTS=(6379 5432) # redis, postgres - keep in sync with docker-compose.dev.yml
+if [ "$#" -gt 0 ]; then
+  PORTS=("$@")
+else
+  PORTS=(6379 5432) # redis, postgres - keep in sync with docker-compose.dev.yml
+fi
 MODE="${PORT_CHECK_MODE:-warn}"
 
 port_tool=""

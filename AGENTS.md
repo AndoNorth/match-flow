@@ -51,10 +51,20 @@ Environment-lifecycle targets exist now: `make dev-setup`,
 `make dev-clean`, `make check-docker`/`make check-infra-ports`
 (preflight checks), and `make dev-k8s`/`make dev-k8s-down` (the same
 infra as a Kind + Tilt K8s loop - see [Tiltfile](Tiltfile)). Per-service
-targets (`make build`, `make run`, `make test`, `make lint`) don't exist
-yet - no services are scaffolded (Phase 3, see
-[docs/ROADMAP.md](docs/ROADMAP.md)). See
+targets now exist: `make build/run/test/test-integration/lint SVC=<name>`
+(see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)). First service
+scaffolded: feed-simulator. See
 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the full list.
+
+## Services
+
+Scaffolded so far (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for
+the full 4-service design) - each entry links to that service's own
+README for env vars, endpoints, and how to run it:
+
+- [feed-simulator](services/feed-simulator/README.md) - simulates a
+  third-party sports data provider, logs events to stdout (no
+  Ingestion wiring yet)
 
 ## Documentation Map
 

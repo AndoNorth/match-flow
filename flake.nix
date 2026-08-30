@@ -19,6 +19,17 @@
           hooks = {
             # Go
             gofmt.enable = true;
+            golines = {
+              enable = true;
+              name = "golines";
+              # Auto-fix, like gofmt: golines only rewraps long lines, it
+              # doesn't reorder or restructure code, so there's no
+              # betteralign-style risk to unattended -w.
+              entry = "${pkgs.golines}/bin/golines -w --max-len=120 --tab-len=4 --shorten-comments --reformat-tags --chain-split-dots";
+              language = "system";
+              pass_filenames = true;
+              files = "\\.go$";
+            };
             golangci-lint = {
               enable = true;
               entry = "${pkgs.golangci-lint}/bin/golangci-lint run";
@@ -95,6 +106,7 @@
             golangci-lint
             govulncheck
             betteralign
+            golines
             air
 
             # Frontend toolchain

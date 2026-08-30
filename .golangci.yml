@@ -39,6 +39,18 @@ formatters:
   enable:
     - gofmt
     - goimports
+    # lll flags long lines but can't fix them - golines auto-wraps.
+    - golines
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/AndoNorth/match-flow
+    golines:
+      max-len: 120
+      tab-len: 4
+      shorten-comments: true
+      reformat-tags: true
+      chain-split-dots: true
 
 issues:
   exclude-dirs:

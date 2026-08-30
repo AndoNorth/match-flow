@@ -47,12 +47,12 @@ normalizes, and distributes them."
 
 - Match Service consuming from Redis - #3.
 - OpenTelemetry instrumentation - Phase 6.
-  Reference implementation reviewed for scale (`packages/common/otel` in
-  a sibling codebase): OTLP exporters, resource/propagator setup, a
-  trace-correlated slog handler, panic-recovering exporter wrappers,
-  Go runtime metrics - real plumbing, not a one-line addition.
-  Retrofitting it once, uniformly, across every MatchFlow service in
-  Phase 6 beats each service inventing its own partial version now.
+  A proper OTel bootstrap is real plumbing, not a one-line addition:
+  OTLP trace/metric exporters, resource and propagator setup, a
+  trace-correlated log handler, and graceful shutdown all need to exist
+  and be gotten right once. Retrofitting it uniformly across every
+  MatchFlow service in Phase 6 beats each service inventing its own
+  partial version now.
   This knowingly follows ROADMAP.md's Phase-6 phasing and Feed
   Simulator's (#1) own precedent, over DEVELOPMENT.md's "expected to
   emit... from early in development, not bolted on after the fact"

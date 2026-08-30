@@ -35,16 +35,13 @@ this repo.
 
 ## Endpoints
 
-- `GET /healthz` - returns 200 while the service is running.
-- `GET /openapi.json` - live OpenAPI spec (served automatically by Huma).
-- `POST /events/provider-a` - submit a ProviderA-shaped match event
-  (nested/abbreviated JSON: `data.mid`, `data.seq`, `data.typ`, `data.ts`,
-  `data.pl`).
-- `POST /events/provider-b` - submit a ProviderB-shaped match event
-  (flat JSON: `match_id`, `sequence`, `event_type`, `occurred_at`, `details`).
+- `GET /healthz` - returns 200 while the service is running. Not part of the
+  API below (registered directly, not through Huma).
 
-Both event endpoints validate the request, normalize it into one canonical
-event, and publish it to the `matchflow:events` Redis pub/sub channel. A
-request that can't even be parsed as JSON gets `400`; a well-formed body that
-fails schema validation (missing/wrong-typed required field) gets `422` -
-Huma's own default status codes, not overridden.
+Everything else is served by Huma - browse `GET /docs` (interactive UI) or
+fetch `GET /openapi.json` for the full, always-current schema of both
+`POST /events/*` routes, their request shapes, and their response codes,
+rather than a second, hand-maintained copy of the same thing here.
+
+Both event routes validate the request, normalize it into one canonical
+event, and publish it to the `matchflow:events` Redis pub/sub channel.

@@ -28,6 +28,7 @@ check-docker: ## Verify Docker is installed and its daemon is reachable
 # Port each service binds in local dev. Picked arbitrarily - no doc
 # precedent - open to change. New services append one line here.
 PORT_feed-simulator := 8080
+PORT_ingestion-service := 8081
 
 GO ?= go
 

@@ -56,6 +56,16 @@ targets now exist: `make build/run/test/test-integration/lint SVC=<name>`
 scaffolded: feed-simulator. See
 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the full list.
 
+## Services
+
+Scaffolded so far (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for
+the full 4-service design) - each entry links to that service's own
+README for env vars, endpoints, and how to run it:
+
+- [feed-simulator](services/feed-simulator/README.md) - simulates a
+  third-party sports data provider, logs events to stdout (no
+  Ingestion wiring yet)
+
 ## Documentation Map
 
 - [docs/GOALS.md](docs/GOALS.md) - what this project is for and isn't

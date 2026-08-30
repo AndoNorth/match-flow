@@ -1,3 +1,9 @@
+---
+status: approved
+date: 2026-08-30
+issues: [2]
+---
+
 # Ingestion Service Design
 
 ## Problem

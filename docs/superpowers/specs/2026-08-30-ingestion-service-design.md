@@ -53,6 +53,11 @@ normalizes, and distributes them."
   Go runtime metrics - real plumbing, not a one-line addition.
   Retrofitting it once, uniformly, across every MatchFlow service in
   Phase 6 beats each service inventing its own partial version now.
+  This knowingly follows ROADMAP.md's Phase-6 phasing and Feed
+  Simulator's (#1) own precedent, over DEVELOPMENT.md's "expected to
+  emit... from early in development, not bolted on after the fact"
+  guidance - a pre-existing tension in the project's own phasing, not
+  one this spec introduces or resolves.
 - Containerization - Phase 7.
 - Durable persistence of events. Ingestion is a stateless hop: validate,
   normalize, publish, forget. No database, no write-ahead log, no
@@ -77,12 +82,18 @@ normalizes, and distributes them."
   `server.Shutdown` pattern as Feed Simulator's `main.go`).
 - `internal/api` - Huma route registration and typed request/response
   structs, one route per provider shape.
-- `internal/normalize` - decode + validate each provider's wire shape,
-  attach provenance, produce the canonical event. Pure functions, no I/O,
-  fully unit-testable in isolation.
+- `internal/normalize` - takes a common `Input` struct (`MatchID`,
+  `Sequence`, `Type`, `Timestamp time.Time`, `Payload`) that both route
+  handlers build identically after their own Huma-tag validation and
+  timestamp conversion, and attaches provenance (`Provider`,
+  `IngestedAt`) to produce the canonical event. Pure function, no I/O, no
+  rejection logic of its own - by the time a value reaches this package,
+  both providers' route-specific differences (wire shape, timestamp
+  format) are already resolved into the same `Input` shape. Fully
+  unit-testable in isolation.
 - `internal/eventbus` - thin Redis publisher: one method,
   `Publish(ctx, CanonicalEvent) error`, JSON-encodes and `PUBLISH`s to the
-  configured channel. Publisher failure surfaces as `5xx` from the
+  fixed channel constant. Publisher failure surfaces as `5xx` from the
   handler - Redis is Ingestion's only output, not an optional cache, so
   the service treats it as a hard dependency and fails startup if the
   initial connection can't be established.
@@ -97,10 +108,25 @@ deterministically), so it can POST to the matching route directly:
 - `POST /events/provider-b` - decodes `ProviderB`'s flat shape
   (`match_id`, `sequence`, `event_type`, `occurred_at`, `details`).
 
-Two typed Huma request structs (one per route) with validation tags give
-Huma's own schema validation the strict-reject behavior for free -
-no hand-rolled sniffing logic, no ambiguity about which shape a payload
-is in.
+**Huma owns validation, exclusively.** Two typed Huma request structs (one
+per route) carry `required`/type validation tags for `MatchID`,
+`Sequence`, `Type`, and the timestamp field - Huma's own schema
+validation rejects malformed input with `400` before the handler runs.
+`internal/normalize` never rejects anything; it only runs on input Huma
+has already accepted. This is also where the two providers' differing
+timestamp wire formats are pinned down explicitly:
+
+- `ProviderA`'s request struct: `TS int64` (Unix seconds - matches
+  `providers.go`'s `e.Timestamp.Unix()` encoding).
+- `ProviderB`'s request struct: `OccurredAt string` with an RFC3339
+  format validation tag (matches `providers.go`'s
+  `e.Timestamp.Format(time.RFC3339)` encoding).
+
+Each route's handler converts its own struct's timestamp field
+(`time.Unix(ts, 0)` or `time.Parse(time.RFC3339, ...)`) into `Input`'s
+`time.Time` field before calling `normalize` - the format difference is
+resolved at the route boundary, producing the same `Input` shape
+regardless of which provider it came from, not inside `normalize`.
 
 **Canonical event** (what gets published to Redis, JSON-encoded):
 
@@ -108,7 +134,7 @@ is in.
 MatchID    string
 Sequence   int
 Type       string
-Timestamp  time.Time   // parsed from either provider's own timestamp format
+Timestamp  time.Time   // converted from the route's own wire format (see above) before reaching this struct
 Payload    map[string]any  // opaque passthrough, untouched
 Provider   string      // "provider-a" | "provider-b" - which route it arrived on
 IngestedAt time.Time   // server-set on receipt, not from the wire payload
@@ -127,14 +153,20 @@ convention DEVELOPMENT.md already establishes for both dev loops).
 
 **Config**: plain env vars, no config framework - matches Feed
 Simulator's existing `os.Getenv("PORT")` pattern exactly. Adds
-`REDIS_URL` and the channel name (constant, not configurable - one
-channel is all this needs, e.g. `matchflow:events`).
+`REDIS_URL` on Ingestion's side; the channel name stays a Go constant,
+not an env var (one channel is all this needs, e.g. `matchflow:events`).
+Ingestion's own port follows the same `PORT` env var pattern as Feed
+Simulator, registered in the Makefile as `PORT_ingestion-service := 8081`
+(next free port after Feed Simulator's `8080`).
 
 **Feed Simulator changes**: `Runner.Run` gains a submit step after
 encoding, POSTing the payload to whichever route matches the encoder
 just used, via a small HTTP client the `Runner` is constructed with
 (injected, so unit tests still pass a `nil`/no-op submitter or a
-`httptest.Server`). Existing `logger.Info("event", ...)` line stays -
+`httptest.Server`). The client is configured with an `INGESTION_URL` env
+var, read in Feed Simulator's `main.go` (default
+`http://localhost:8081`, matching Ingestion's port above). Existing
+`logger.Info("event", ...)` line stays -
 submission failures log an error and continue the loop rather than
 stopping the simulation (Feed Simulator's job is to keep generating
 events; Ingestion being briefly down shouldn't kill the generator).
@@ -142,17 +174,25 @@ events; Ingestion being briefly down shouldn't kill the generator).
 ## Validation
 
 - **Unit** (Ginkgo/Gomega, no infra): `internal/normalize` gets
-  table-driven specs feeding real `ProviderA`/`ProviderB` JSON fixtures
-  (reusing the same encode/decode shapes `services/feed-simulator`
-  already defines) and asserting both produce an identical canonical
-  event apart from `Provider`. Separate specs cover each required-field
-  rejection case (missing `MatchID`, bad `Sequence`, empty `Type`,
-  unparseable timestamp) for both routes.
+  table-driven specs feeding an `Input` value directly (bypassing HTTP
+  entirely, since `Input` is already provider-agnostic by construction)
+  and asserting the output canonical event carries the right `Provider`
+  and a set `IngestedAt`. `normalize` has no rejection paths to test - it
+  only ever receives Huma-validated, already-converted input. Separately,
+  each route handler in `internal/api` gets its own table-driven specs
+  (using real `ProviderA`/`ProviderB` JSON fixtures reusing the same
+  field shapes `services/feed-simulator` already defines) asserting it
+  builds the correct `Input` value from its provider's wire shape - this
+  is where the two providers' actual decode/timestamp-conversion logic is
+  exercised.
 - **Integration** (`//go:build integration`, testcontainers-go spinning a
-  fresh Redis per run - independent of `make dev-infra` being up):
-  POST a valid payload to each route against a real HTTP server, then
-  assert the canonical event actually arrives on the subscribed Redis
-  channel. This is the contract proof - normalization plus the Redis
+  fresh Redis per run - independent of `make dev-infra` being up): POST
+  both a valid payload and each required-field rejection case (missing
+  `MatchID`, bad `Sequence`, empty `Type`, malformed timestamp) to both
+  routes against a real HTTP server. Valid payloads assert the canonical
+  event arrives on the subscribed Redis channel; malformed payloads
+  assert Huma's `400` response and that nothing was published. This is
+  the contract proof - request validation, normalization, and the Redis
   hop together, not mocked.
 - Feed Simulator's `Runner` gets a unit spec asserting it POSTs to the
   correct route per encoder in the alternation, using an injected
@@ -186,6 +226,15 @@ so it would be the wrong tool for this check at any phase.
 
 ## Out of Scope
 
+Distinct from Non-Goals above: a Non-Goal is out of this document's
+remit because something else already owns it - another service, another
+documented phase in ROADMAP.md, or the architecture as documented (that
+"something else" may itself revisit it later; this spec still won't). An
+Out of Scope item is a design choice within Ingestion Service's own
+remit that this spec deliberately declines to make now, with no other
+document already scheduled to make it - a candidate for revisiting
+within a future revision of this same spec, not a different one.
+
 - **Config-driven provider decoding.** Discussed and deferred: a data
   file pairing an emulated provider shape to a decoding path, so adding a
   third external-provider wire format wouldn't require a code change.
@@ -200,7 +249,7 @@ so it would be the wrong tool for this check at any phase.
 ## References
 
 - [docs/ARCHITECTURE.md#ingestion-service](../../ARCHITECTURE.md#ingestion-service)
-- [docs/TECH_STACK.md](../../TECH_STACK.md) - Huma, Redis, Ginkgo+Gomega, testcontainers-go
+- [docs/TECH_STACK.md](../../TECH_STACK.md) - Huma, Redis, Ginkgo+Gomega
 - [docs/GOALS.md](../../GOALS.md) - non-goals (no Kafka/NATS-style broker, no user accounts)
 - Issue #2 - Feat: Scaffold Ingestion Service
 - `services/feed-simulator/internal/simulator/providers/providers.go` -

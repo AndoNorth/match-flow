@@ -8,19 +8,31 @@ import (
 	"github.com/AndoNorth/match-flow/services/feed-simulator/internal/simulator/providers"
 )
 
+// ProviderRoute pairs one provider's encoder with the Ingestion Service
+// route that decodes that same shape.
+type ProviderRoute struct {
+	Encode providers.Encoder
+	Route  string
+}
+
 // Runner wires a MatchEngine's event stream through alternating
-// provider encoders and into a logger. This is where the actual
-// generator/encoder/logging behavior lives - main.go only constructs a
-// Runner and calls Run.
+// provider encoders, logs each payload, and submits it to Ingestion
+// Service over HTTP. This is where the actual generator/encoder/
+// logging/submission behavior lives - main.go only constructs a Runner
+// and calls Run.
 type Runner struct {
 	engine       *domain.MatchEngine
 	logger       *slog.Logger
-	encoders     []providers.Encoder
+	submitter    Submitter
+	routes       []ProviderRoute
 	emittedCount int
 }
 
-func NewRunner(engine *domain.MatchEngine, encoders []providers.Encoder, logger *slog.Logger) *Runner {
-	return &Runner{engine: engine, encoders: encoders, logger: logger}
+// NewRunner builds a Runner. submitter may be nil - Run then logs each
+// event without submitting it anywhere (useful for tests that only
+// care about encoding/logging behavior).
+func NewRunner(engine *domain.MatchEngine, routes []ProviderRoute, submitter Submitter, logger *slog.Logger) *Runner {
+	return &Runner{engine: engine, routes: routes, submitter: submitter, logger: logger}
 }
 
 // Run blocks until the engine's event channel closes (the Sport
@@ -31,16 +43,22 @@ func (r *Runner) Run(ctx context.Context) {
 	events := r.engine.Run(ctx)
 
 	for event := range events {
-		encoder := r.encoders[r.emittedCount%len(r.encoders)]
+		route := r.routes[r.emittedCount%len(r.routes)]
 		r.emittedCount++
 
-		payload, err := encoder(event)
+		payload, err := route.Encode(event)
 		if err != nil {
 			r.logger.Error("encode event failed", "error", err)
 			continue
 		}
 
 		r.logger.Info("event", "provider_payload", string(payload))
+
+		if r.submitter != nil {
+			if err := r.submitter.Submit(ctx, route.Route, payload); err != nil {
+				r.logger.Error("submit event failed", "error", err, "route", route.Route)
+			}
+		}
 	}
 
 	if ctx.Err() != nil {

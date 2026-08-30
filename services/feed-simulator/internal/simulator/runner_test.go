@@ -3,7 +3,10 @@ package simulator_test
 import (
 	"bytes"
 	"context"
+	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -27,6 +30,13 @@ func (f *fakeSport) NextEvent(state domain.MatchState) (domain.DomainEvent, bool
 	return domain.DomainEvent{Type: "test_event"}, true, false
 }
 
+func testRoutes() []simulator.ProviderRoute {
+	return []simulator.ProviderRoute{
+		{Encode: providers.EncodeProviderA, Route: "/events/provider-a"},
+		{Encode: providers.EncodeProviderB, Route: "/events/provider-b"},
+	}
+}
+
 var _ = Describe("Runner", func() {
 	It("logs each encoded payload alternating providers, then logs match_complete", func() {
 		var buf bytes.Buffer
@@ -34,10 +44,7 @@ var _ = Describe("Runner", func() {
 
 		ticker := domain.NewFakeTicker()
 		engine := domain.NewMatchEngine(&fakeSport{}, ticker, "match-1")
-		runner := simulator.NewRunner(engine, []providers.Encoder{
-			providers.EncodeProviderA,
-			providers.EncodeProviderB,
-		}, logger)
+		runner := simulator.NewRunner(engine, testRoutes(), nil, logger)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
@@ -60,5 +67,46 @@ var _ = Describe("Runner", func() {
 		Expect(output).To(ContainSubstring(`\"mid\"`))      // ProviderA payload present
 		Expect(output).To(ContainSubstring(`\"match_id\"`)) // ProviderB payload present
 		Expect(output).To(ContainSubstring("match_complete"))
+	})
+
+	It("submits each encoded payload to the correct Ingestion route", func() {
+		type gotRequest struct {
+			path string
+			body string
+		}
+		var requests []gotRequest
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, _ := io.ReadAll(r.Body)
+			requests = append(requests, gotRequest{path: r.URL.Path, body: string(body)})
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+
+		logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+		ticker := domain.NewFakeTicker()
+		engine := domain.NewMatchEngine(&fakeSport{}, ticker, "match-1")
+		submitter := simulator.NewHTTPSubmitter(server.URL)
+		runner := simulator.NewRunner(engine, testRoutes(), submitter, logger)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		runDone := make(chan struct{})
+		go func() {
+			runner.Run(ctx)
+			close(runDone)
+		}()
+
+		ticker.Fire()
+		ticker.Fire()
+
+		Eventually(runDone, 2*time.Second).Should(BeClosed())
+
+		Expect(requests).To(HaveLen(2))
+		Expect(requests[0].path).To(Equal("/events/provider-a"))
+		Expect(requests[0].body).To(ContainSubstring(`"mid"`))
+		Expect(requests[1].path).To(Equal("/events/provider-b"))
+		Expect(requests[1].body).To(ContainSubstring(`"match_id"`))
 	})
 })

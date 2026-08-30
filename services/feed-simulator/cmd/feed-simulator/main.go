@@ -33,10 +33,13 @@ func main() {
 	// one minute - a full 90-minute match plays out in ~90 seconds.
 	ticker := domain.NewRealTicker(1 * time.Second)
 	engine := domain.NewMatchEngine(sport, ticker, "match-1")
-	runner := simulator.NewRunner(engine, []providers.Encoder{
-		providers.EncodeProviderA,
-		providers.EncodeProviderB,
-	}, logger)
+	routes := []simulator.ProviderRoute{
+		{Encode: providers.EncodeProviderA, Route: "/events/provider-a"},
+		{Encode: providers.EncodeProviderB, Route: "/events/provider-b"},
+	}
+	// submitter is nil until Task 8 wires an HTTPSubmitter pointed at
+	// Ingestion Service's base URL - Runner logs but doesn't submit.
+	runner := simulator.NewRunner(engine, routes, nil, logger)
 
 	go runner.Run(ctx)
 

@@ -1,0 +1,29 @@
+# .air.toml
+# Generic across every service - Air's cwd is set to
+# services/<name>/cmd/<name> by `make run SVC=<name>`, so the relative
+# build command below always builds whichever service launched it.
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  bin = "./tmp/main"
+  cmd = "go build -o ./tmp/main ."
+  delay = 1000
+  exclude_dir = ["tmp", ".git", ".worktrees", "node_modules"]
+  exclude_file = []
+  exclude_regex = ["_test\\.go$"]
+  exclude_unchanged = false
+  follow_symlink = false
+  full_bin = ""
+  include_dir = []
+  include_ext = ["go"]
+  kill_delay = "2s"
+  log = "build-errors.log"
+  send_interrupt = true
+  stop_on_error = true
+
+[log]
+  time = false
+
+[misc]
+  clean_on_exit = true

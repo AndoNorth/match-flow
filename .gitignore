@@ -51,6 +51,9 @@ result-*
 # are throwaway working notes for whoever executes them)
 docs/superpowers/plans
 
+# Lavish Editor scratch artifacts (review-session HTML, not a deliverable)
+.lavish
+
 # Tilt / K8s local dev
 .tiltbuild
 tilt_modules

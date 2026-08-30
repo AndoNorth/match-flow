@@ -227,6 +227,43 @@ That stack is Phase 6's concern once services actually emit traces and
 metrics into it; it also isn't a Redis pub/sub inspector even once wired,
 so it would be the wrong tool for this check at any phase.
 
+### Observed results (2026-08-30)
+
+Ran the procedure above with real processes: `make dev-infra`, then
+`make run SVC=ingestion-service` and `make run SVC=feed-simulator` each
+in the background, then `redis-cli SUBSCRIBE matchflow:events` (wrapped
+in `timeout 12` to capture a bounded sample instead of hanging).
+
+Messages appeared on `matchflow:events` within seconds of both services
+being up. Representative sample:
+
+```
+{"payload":{"minute":14,"team":"home"},"timestamp":"2026-08-30T22:57:50+01:00","ingested_at":"2026-08-30T22:57:50.349590587+01:00","match_id":"match-1","type":"goal","provider":"provider-b","sequence":14}
+{"payload":{"market":"match_winner","price":2.7685299153023526,"selection":"home"},"timestamp":"2026-08-30T22:57:55+01:00","ingested_at":"2026-08-30T22:57:55.348965654+01:00","match_id":"match-1","type":"odds_update","provider":"provider-a","sequence":19}
+{"payload":{"minute":22,"team":"home"},"timestamp":"2026-08-30T22:57:58+01:00","ingested_at":"2026-08-30T22:57:58.350781569+01:00","match_id":"match-1","type":"goal","provider":"provider-b","sequence":22}
+```
+
+All expected canonical-event fields were present on every message:
+`match_id`, `sequence`, `type`, `timestamp`, `payload`, `provider`, and
+`ingested_at`. The `provider` field alternated `provider-a`/`provider-b`
+across consecutive events, matching Feed Simulator's alternation by
+sequence parity. Feed Simulator's own stdout logged an `event` line for
+every generated event and contained zero `submit event failed` lines
+across the run, confirming every POST to Ingestion Service was accepted.
+
+One thing the automated layers couldn't have caught, and that isn't a
+defect: `redis-cli SUBSCRIBE` only sees messages published *after* it
+connects, so the very first event (sequence 1, `kickoff`, generated a
+few seconds before the subscriber attached) never appeared in the
+sample window even though Ingestion Service logged no error handling
+it. Anyone repeating this check should read a short gap between
+starting the services and starting the subscriber as expected, not as a
+dropped event.
+
+Teardown (`kill` the two background processes, `make dev-infra-down`)
+completed cleanly with no lingering `air`/service processes and no
+errors from Docker Compose.
+
 ## Open Questions
 
 - Exact channel name (`matchflow:events` used as a placeholder above) -

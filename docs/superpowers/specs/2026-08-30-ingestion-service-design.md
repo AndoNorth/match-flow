@@ -124,8 +124,11 @@ explicitly:
 
 - `ProviderA`'s request struct: `TS int64` (Unix seconds - matches
   `providers.go`'s `e.Timestamp.Unix()` encoding).
-- `ProviderB`'s request struct: `OccurredAt string` with an RFC3339
-  format validation tag (matches `providers.go`'s
+- `ProviderB`'s request struct: a plain `OccurredAt string` field,
+  parsed manually in the handler with `time.Parse(time.RFC3339, ...)`
+  rather than a Huma format-validation tag - a schema-level tag would
+  make Huma reject a bad timestamp with `422` instead of the `400` this
+  design requires (matches `providers.go`'s
   `e.Timestamp.Format(time.RFC3339)` encoding).
 
 Each route's handler converts its own struct's timestamp field

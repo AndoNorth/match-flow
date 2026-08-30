@@ -2,6 +2,7 @@ package simulator
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/AndoNorth/match-flow/services/feed-simulator/internal/simulator/domain"
@@ -55,7 +56,7 @@ func (r *Runner) Run(ctx context.Context) {
 		r.logger.Info("event", "provider_payload", string(payload))
 
 		if r.submitter != nil {
-			if err := r.submitter.Submit(ctx, route.Route, payload); err != nil {
+			if err := r.submitter.Submit(ctx, route.Route, payload); err != nil && !errors.Is(err, context.Canceled) {
 				r.logger.Error("submit event failed", "error", err, "route", route.Route)
 			}
 		}

@@ -76,7 +76,7 @@ var _ = Describe("Ingestion Service HTTP + Redis contract", func() {
 		Expect(msg.Payload).To(ContainSubstring(`"provider":"provider-a"`))
 	})
 
-	It("rejects a schema-invalid ProviderA payload with 422 and publishes nothing", func() {
+	It("rejects a schema-invalid ProviderA payload with 422", func() {
 		resp, err := http.Post(
 			server.URL+"/events/provider-a",
 			"application/json",
@@ -121,7 +121,7 @@ var _ = Describe("Ingestion Service HTTP + Redis contract", func() {
 		Expect(msg.Payload).To(ContainSubstring(`"provider":"provider-b"`))
 	})
 
-	It("rejects an unparseable timestamp on ProviderB with 400 and publishes nothing", func() {
+	It("rejects an unparseable timestamp on ProviderB with 400", func() {
 		resp, err := http.Post(
 			server.URL+"/events/provider-b",
 			"application/json",

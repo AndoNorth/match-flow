@@ -101,6 +101,19 @@ var _ = Describe("Register", func() {
 			Expect(pub.published[0].Provider).To(Equal("provider-b"))
 		})
 
+		It("accepts a valid payload with no details and publishes it", func() {
+			resp := testAPI.Post("/events/provider-b", map[string]any{
+				"match_id":    "match-1",
+				"sequence":    3,
+				"event_type":  "goal",
+				"occurred_at": "2026-08-30T12:00:00Z",
+			})
+
+			Expect(resp.Code).To(Equal(http.StatusOK))
+			Expect(pub.published).To(HaveLen(1))
+			Expect(pub.published[0].Payload).To(BeNil())
+		})
+
 		It("rejects an unparseable timestamp with 400", func() {
 			resp := testAPI.Post("/events/provider-b", map[string]any{
 				"match_id":    "match-1",

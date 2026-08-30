@@ -21,6 +21,7 @@ const (
 	readHeaderTimeout   = 5 * time.Second
 	shutdownTimeout     = 5 * time.Second
 	defaultIngestionURL = "http://localhost:8081"
+	defaultPort         = "8080"
 )
 
 func main() {
@@ -54,7 +55,7 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		port = defaultPort
 	}
 
 	server := &http.Server{

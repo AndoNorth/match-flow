@@ -1,14 +1,17 @@
 # feed-simulator
 
 Simulates a third-party sports data provider - generates a continuous,
-believable stream of football match events for the rest of the system
-to consume.
-See [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md#feed-simulator)
-for its role in the system, and
-[docs/superpowers/specs/2026-08-30-feed-simulator-and-service-dev-loop-design.md](../../docs/superpowers/specs/2026-08-30-feed-simulator-and-service-dev-loop-design.md)
-for the original design, plus
-[docs/superpowers/specs/2026-08-30-ingestion-service-design.md](../../docs/superpowers/specs/2026-08-30-ingestion-service-design.md)
-for how it wires into Ingestion Service.
+believable stream of football match events, alternating between two
+structurally different provider wire shapes, and submits each one to
+Ingestion Service.
+
+## Building
+
+```bash
+make build SVC=feed-simulator
+```
+
+Builds `bin/feed-simulator`.
 
 ## Running
 
@@ -16,7 +19,14 @@ for how it wires into Ingestion Service.
 make run SVC=feed-simulator
 ```
 
+Runs with Air hot-reload. Ingestion Service doesn't need to be running first -
+a submission failure is logged and the simulation continues, so a briefly
+unreachable Ingestion Service never stops event generation.
+
 ## Environment variables
+
+No CLI flags - configuration is env-var only, matching every other service in
+this repo.
 
 | Variable         | Default                   | Description                                                                |
 |------------------|----------------------------|-----------------------------------------------------------------------------|
@@ -27,7 +37,8 @@ make run SVC=feed-simulator
 
 - `GET /healthz` - returns 200 while the service is running.
 
-Every generated event is logged to stdout **and** POSTed to Ingestion Service
-(alternating `/events/provider-a` / `/events/provider-b` to match which
-encoder produced it). A submission failure is logged and the simulation
-continues - Ingestion being briefly unreachable never stops event generation.
+Every generated event is logged to stdout **and** POSTed to Ingestion Service,
+alternating `POST /events/provider-a` (nested/abbreviated JSON shape) and
+`POST /events/provider-b` (flat JSON shape) to match which encoder produced
+it - two structurally different payloads for the same logical event, on
+purpose, simulating two competing real-world data providers.

@@ -12,6 +12,7 @@ out
 
 # Env files
 .env
+.env.dev
 .env.local
 .env.*.local
 
@@ -45,6 +46,10 @@ result-*
 
 # Git worktrees
 .worktrees
+
+# Scratch implementation plans (specs are the durable artifact; plans
+# are throwaway working notes for whoever executes them)
+docs/superpowers/plans
 
 # Tilt / K8s local dev
 .tiltbuild

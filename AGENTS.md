@@ -52,8 +52,8 @@ Environment-lifecycle targets exist now: `make dev-setup`,
 (preflight checks), and `make dev-k8s`/`make dev-k8s-down` (the same
 infra as a Kind + Tilt K8s loop - see [Tiltfile](Tiltfile)). Per-service
 targets now exist: `make build/run/test/test-integration/lint SVC=<name>`
-(see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)). First service
-scaffolded: feed-simulator. See
+(see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)). Services
+scaffolded so far: feed-simulator, ingestion-service. See
 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the full list.
 
 ## Services
@@ -63,8 +63,11 @@ the full 4-service design) - each entry links to that service's own
 README for env vars, endpoints, and how to run it:
 
 - [feed-simulator](services/feed-simulator/README.md) - simulates a
-  third-party sports data provider, logs events to stdout (no
-  Ingestion wiring yet)
+  third-party sports data provider and submits events to Ingestion
+  Service over HTTP
+- [ingestion-service](services/ingestion-service/README.md) - receives
+  events, validates and normalizes them into one canonical shape, and
+  publishes them to Redis
 
 ## Documentation Map
 

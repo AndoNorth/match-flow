@@ -18,8 +18,10 @@ import (
 )
 
 const (
-	readHeaderTimeout = 5 * time.Second
-	shutdownTimeout   = 5 * time.Second
+	readHeaderTimeout   = 5 * time.Second
+	shutdownTimeout     = 5 * time.Second
+	defaultIngestionURL = "http://localhost:8081"
+	defaultPort         = "8080"
 )
 
 func main() {
@@ -33,10 +35,18 @@ func main() {
 	// one minute - a full 90-minute match plays out in ~90 seconds.
 	ticker := domain.NewRealTicker(1 * time.Second)
 	engine := domain.NewMatchEngine(sport, ticker, "match-1")
-	runner := simulator.NewRunner(engine, []providers.Encoder{
-		providers.EncodeProviderA,
-		providers.EncodeProviderB,
-	}, logger)
+
+	ingestionURL := os.Getenv("INGESTION_URL")
+	if ingestionURL == "" {
+		ingestionURL = defaultIngestionURL
+	}
+	submitter := simulator.NewHTTPSubmitter(ingestionURL)
+
+	routes := []simulator.ProviderRoute{
+		{Encode: providers.EncodeProviderA, Route: "/events/provider-a"},
+		{Encode: providers.EncodeProviderB, Route: "/events/provider-b"},
+	}
+	runner := simulator.NewRunner(engine, routes, submitter, logger)
 
 	go runner.Run(ctx)
 
@@ -45,7 +55,7 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		port = defaultPort
 	}
 
 	server := &http.Server{
@@ -63,7 +73,7 @@ func main() {
 		}
 	}()
 
-	logger.Info("feed-simulator listening", "port", port)
+	logger.Info("feed-simulator listening", "port", port, "ingestion_url", ingestionURL)
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		logger.Error("server failed", "error", err)
 		os.Exit(1)

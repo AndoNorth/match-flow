@@ -110,9 +110,9 @@ A small set of environment-lifecycle targets is already in place
   Docker Compose, without starting any services
 - `make dev-infra-down` / `make dev-infra-clean` - stop infra, or stop
   and wipe its volumes
-- `make dev-all` - bring up infra; now that feed-simulator exists under
-  `services/<name>/cmd`, this also starts it (and the frontend dev
-  server) together - for now it just brings up infra and says so
+- `make dev-all` - intended to bring up infra plus every service and
+  the frontend dev server together; not implemented yet - run each
+  service individually with `make run SVC=<name>` in the meantime
 - `make dev-clean` - full teardown (infra + volumes)
 - `make check-infra-ports` - warn if Redis/Postgres host ports are
   already taken before `dev-infra` brings the stack up (a prereq of

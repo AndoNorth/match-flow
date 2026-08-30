@@ -19,7 +19,7 @@ Feed Simulator -> Ingestion Service -> Redis -> Match Service
 
 ```mermaid
 flowchart LR
-    FS["Feed Simulator<br/>(Go)"] -- "events (REST/gRPC)" --> ING["Ingestion Service<br/>(Go)"]
+    FS["Feed Simulator<br/>(Go)"] -- "events (REST)" --> ING["Ingestion Service<br/>(Go)"]
     ING -- "publish" --> REDIS[("Redis<br/>pub/sub")]
     REDIS -- "subscribe" --> MATCH["Match Service<br/>(Go)"]
     MATCH -- "read/write" --> PG[("PostgreSQL")]
@@ -147,8 +147,8 @@ Match Service, Ingestion Service, or Redis.
 
 ## Communication Patterns
 
-- **Feed Simulator -> Ingestion Service**: event submission (REST or
-  gRPC, per implementation).
+- **Feed Simulator -> Ingestion Service**: event submission over REST
+  (via Huma).
 - **Ingestion Service -> Redis**: event publication for distribution.
 - **Match Service**: consumes distributed events from Redis to update
   state; exposes that state via REST/gRPC to other services.

@@ -13,8 +13,7 @@ dev-infra-clean: ## Stop infra and wipe its volumes
 	docker compose -f docker-compose.dev.yml down -v
 
 dev-all: dev-infra ## Bring up infra plus every service and the frontend dev server
-	@echo "No services are scaffolded yet (see docs/ROADMAP.md, Phase 3)."
-	@echo "Once services exist under services/<name>/cmd, this target will start them alongside infra."
+	@echo "Not implemented yet - run each service individually: make run SVC=<name>"
 
 dev-clean: dev-infra-clean ## Full teardown - infra, volumes, everything dev-setup created
 
@@ -28,6 +27,7 @@ check-docker: ## Verify Docker is installed and its daemon is reachable
 # Port each service binds in local dev. Picked arbitrarily - no doc
 # precedent - open to change. New services append one line here.
 PORT_feed-simulator := 8080
+PORT_ingestion-service := 8081
 
 GO ?= go
 

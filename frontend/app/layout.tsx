@@ -13,7 +13,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" data-theme="night">
-      <body>{children}</body>
+      <body className="bg-base-100 text-base-content min-h-screen">
+        {children}
+      </body>
     </html>
   );
 }

@@ -11,6 +11,8 @@ const scheduled: MatchBody = {
   match_id: "s1",
   sport: "football",
   status: "scheduled",
+  home_team: "Ashford United",
+  away_team: "Denbury City",
   home_score: 0,
   away_score: 0,
   clock_mins: 0,
@@ -19,6 +21,8 @@ const live: MatchBody = {
   match_id: "l1",
   sport: "football",
   status: "live",
+  home_team: "Foxwick Athletic",
+  away_team: "Greymoor Rovers",
   home_score: 1,
   away_score: 0,
   clock_mins: 10,
@@ -27,6 +31,8 @@ const finished: MatchBody = {
   match_id: "f1",
   sport: "football",
   status: "full_time",
+  home_team: "Harrowgate Town",
+  away_team: "Ironbridge Wanderers",
   home_score: 2,
   away_score: 2,
   clock_mins: 90,
@@ -55,8 +61,12 @@ describe("LiveMatchList", () => {
 
   it("defaults to the Live tab active, showing the live match", () => {
     render(<LiveMatchList initialMatches={[scheduled, live, finished]} />);
-    expect(screen.getByText("l1")).toBeInTheDocument();
-    expect(screen.queryByText("s1")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Foxwick Athletic vs Greymoor Rovers"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Ashford United vs Denbury City"),
+    ).not.toBeInTheDocument();
   });
 
   it("applies a goal update to the matching match's score", () => {
@@ -93,6 +103,19 @@ describe("LiveMatchList", () => {
     });
     expect(screen.getByText("2 - 0")).toBeInTheDocument();
     expect(screen.queryByText("3 - 0")).not.toBeInTheDocument();
+  });
+
+  it("ignores an odds_update event, leaving score unchanged", () => {
+    render(<LiveMatchList initialMatches={[live]} />);
+    act(() => {
+      onUpdate({
+        type: "odds_update",
+        sequence: 1,
+        payload: { market: "match_winner", selection: "home", price: 1.5 },
+        match_id: "l1",
+      });
+    });
+    expect(screen.getByText("1 - 0")).toBeInTheDocument();
   });
 
   it("ignores an update for a match_id it doesn't know about", () => {

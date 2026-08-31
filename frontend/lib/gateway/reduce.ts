@@ -18,6 +18,26 @@ const RULES: Record<string, Rule> = {
   card: { category: "unknown" },
 };
 
+// The deterministic in-match minute for event types that don't carry a
+// payload.minute (kickoff/half_time/full_time only ever fire at these
+// points, per football's Sport.NextEvent - see
+// services/feed-simulator/internal/simulator/football/football.go).
+const FIXED_MINUTE: Record<string, number> = {
+  kickoff: 0,
+  half_time: 45,
+  full_time: 90,
+};
+
+// eventMinute returns the in-match minute an event happened at, for
+// display - the Gateway's wire format carries no timestamp field, so
+// this is the only clock reference a UI has for a timeline row.
+export function eventMinute(event: EventBody): number | undefined {
+  if (typeof event.payload?.minute === "number") {
+    return event.payload.minute;
+  }
+  return FIXED_MINUTE[event.type];
+}
+
 export function reduce(state: MatchBody, event: EventBody): MatchBody {
   const rule = RULES[event.type] ?? { category: "unknown" as const };
 

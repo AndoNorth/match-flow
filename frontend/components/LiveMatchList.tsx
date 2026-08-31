@@ -6,6 +6,7 @@ import { subscribeToMatches } from "@/lib/gateway/realtime";
 import { reduce } from "@/lib/gateway/reduce";
 import type { EventBody, MatchBody } from "@/lib/gateway/types";
 import { ConnectionIndicator } from "./ConnectionIndicator";
+import { Navbar } from "./Navbar";
 
 type Tab = "Scheduled" | "Live" | "Finished";
 const TABS: Tab[] = ["Scheduled", "Live", "Finished"];
@@ -40,6 +41,11 @@ export function LiveMatchList({
         setMatches(toMap(list));
       },
       (event: EventBody) => {
+        // odds_update is never persisted by Match Service - see the
+        // matching comment in LiveMatchDetail.tsx. Not user-visible here
+        // (no timeline on this page), but skipped for the same reason:
+        // it's not a real match-state event.
+        if (event.type === "odds_update") return;
         const matchId = event.match_id;
         if (!matchId) return;
         if (event.sequence <= (lastSequence.current[matchId] ?? 0)) return;
@@ -61,6 +67,7 @@ export function LiveMatchList({
 
   return (
     <div>
+      <Navbar connected={connected} />
       <ConnectionIndicator connected={connected} />
       <div role="tablist" className="tabs tabs-box mb-4">
         {TABS.map((tab) => (
@@ -82,11 +89,21 @@ export function LiveMatchList({
             href={`/matches/${match.match_id}`}
             className="card card-border bg-base-100"
           >
-            <div className="card-body p-4 flex-row items-center justify-between">
-              <span>{match.match_id}</span>
-              <span className="text-xl font-bold tabular-nums">
-                {match.home_score} - {match.away_score}
-              </span>
+            <div className="card-body p-4 flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="badge badge-sm">{match.status}</span>
+                <span className="truncate">
+                  {match.home_team} vs {match.away_team}
+                </span>
+              </div>
+              <div className="flex items-center gap-4 shrink-0">
+                <span className="opacity-60 tabular-nums text-sm">
+                  {match.clock_mins}'
+                </span>
+                <span className="text-xl font-bold tabular-nums">
+                  {match.home_score} - {match.away_score}
+                </span>
+              </div>
             </div>
           </Link>
         ))}

@@ -11,6 +11,8 @@ const match: MatchBody = {
   match_id: "m1",
   sport: "football",
   status: "live",
+  home_team: "Ashford United",
+  away_team: "Denbury City",
   home_score: 0,
   away_score: 0,
   clock_mins: 10,
@@ -69,6 +71,40 @@ describe("LiveMatchDetail", () => {
     expect(screen.getByTestId("home-score")).toHaveTextContent("0");
     expect(screen.getByTestId("away-score")).toHaveTextContent("0");
     expect(screen.queryByText("goal")).not.toBeInTheDocument();
+  });
+
+  it("ignores an odds_update event, leaving score and timeline unchanged", () => {
+    render(<LiveMatchDetail initialMatch={match} initialEvents={[kickoff]} />);
+    act(() => {
+      onUpdate({
+        type: "odds_update",
+        sequence: 2,
+        payload: { market: "match_winner", selection: "home", price: 1.5 },
+      });
+    });
+    expect(screen.getByTestId("home-score")).toHaveTextContent("0");
+    expect(screen.getByTestId("away-score")).toHaveTextContent("0");
+    expect(screen.queryByText("odds_update")).not.toBeInTheDocument();
+  });
+
+  it("shows a live-feed badge reflecting connection state", () => {
+    render(<LiveMatchDetail initialMatch={match} initialEvents={[]} />);
+    expect(screen.getByTestId("live-feed-badge")).toHaveTextContent(
+      "live feed",
+    );
+    act(() => {
+      onConnectionChange(false);
+    });
+    expect(screen.getByTestId("live-feed-badge")).toHaveTextContent(
+      "reconnecting",
+    );
+  });
+
+  it("has a link back to the match list", () => {
+    render(<LiveMatchDetail initialMatch={match} initialEvents={[]} />);
+    expect(
+      screen.getByRole("link", { name: /back to matches/i }),
+    ).toHaveAttribute("href", "/");
   });
 
   it("shows the reconnecting indicator when the connection drops", () => {

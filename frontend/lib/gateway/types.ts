@@ -4,6 +4,8 @@ export interface MatchBody {
   match_id: string;
   sport: string;
   status: MatchStatus;
+  home_team: string;
+  away_team: string;
   home_score: number;
   away_score: number;
   clock_mins: number;

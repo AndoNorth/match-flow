@@ -6,6 +6,8 @@ const base: MatchBody = {
   match_id: "m1",
   sport: "football",
   status: "scheduled",
+  home_team: "Ashford United",
+  away_team: "Denbury City",
   home_score: 0,
   away_score: 0,
   clock_mins: 0,

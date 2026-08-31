@@ -28,6 +28,7 @@ check-docker: ## Verify Docker is installed and its daemon is reachable
 # precedent - open to change. New services append one line here.
 PORT_feed-simulator := 8080
 PORT_ingestion-service := 8081
+PORT_match-service := 8082
 
 GO ?= go
 

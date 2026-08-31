@@ -108,6 +108,7 @@
             betteralign
             golines
             air
+            goose
 
             # Frontend toolchain
             nodejs_22

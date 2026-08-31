@@ -75,6 +75,7 @@ func Register(api huma.API, store reader) {
 			return nil, huma.Error500InternalServerError("failed to list matches", err)
 		}
 		out := &matchListOutput{}
+		out.Body.Matches = make([]matchBody, 0, len(records))
 		for _, r := range records {
 			out.Body.Matches = append(out.Body.Matches, toMatchBody(r))
 		}
@@ -111,6 +112,7 @@ func Register(api huma.API, store reader) {
 			return nil, huma.Error500InternalServerError("failed to list events", err)
 		}
 		out := &eventListOutput{}
+		out.Body.Events = make([]eventBody, 0, len(records))
 		for _, r := range records {
 			out.Body.Events = append(out.Body.Events, eventBody{
 				Type: r.Type, Payload: r.Payload, Sequence: r.Sequence,

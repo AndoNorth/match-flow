@@ -109,6 +109,7 @@ func main() {
 
 	logger.Info("match-service listening", "port", port, "redis_url", redisURL, "workers", numWorkers)
 	serveErr := server.ListenAndServe()
+	cancel()  // ListenAndServe returning for any reason (e.g. bind failure) must trigger shutdown too
 	<-runDone // wait for the worker pool to finish draining before exiting
 	if serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
 		logger.Error("server failed", "error", serveErr)

@@ -3,6 +3,7 @@ package api_test
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 
@@ -119,5 +120,39 @@ var _ = Describe("Register", func() {
 		Expect(err).NotTo(HaveOccurred())
 		defer func() { _ = resp.Body.Close() }()
 		Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+	})
+
+	It("GET /matches returns an empty array, not null, when there are no matches", func() {
+		store.matches = nil
+		server := newTestServer(store)
+		defer server.Close()
+
+		resp, err := http.Get(server.URL + "/matches")
+		Expect(err).NotTo(HaveOccurred())
+		defer func() { _ = resp.Body.Close() }()
+		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		var parsed struct {
+			Matches []map[string]any `json:"matches"`
+		}
+		Expect(json.NewDecoder(resp.Body).Decode(&parsed)).To(Succeed())
+		Expect(parsed.Matches).NotTo(BeNil())
+		Expect(parsed.Matches).To(BeEmpty())
+	})
+
+	It("GET /matches/{id}/events returns an empty array, not null, when there are no events", func() {
+		store.events["match-1"] = nil
+		server := newTestServer(store)
+		defer server.Close()
+
+		resp, err := http.Get(server.URL + "/matches/match-1/events")
+		Expect(err).NotTo(HaveOccurred())
+		defer func() { _ = resp.Body.Close() }()
+		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		var parsed struct {
+			Events []map[string]any `json:"events"`
+		}
+		Expect(json.NewDecoder(resp.Body).Decode(&parsed)).To(Succeed())
+		Expect(parsed.Events).NotTo(BeNil())
+		Expect(parsed.Events).To(BeEmpty())
 	})
 })

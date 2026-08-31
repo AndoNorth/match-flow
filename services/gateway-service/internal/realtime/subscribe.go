@@ -3,6 +3,7 @@ package realtime
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 
 	"github.com/redis/go-redis/v9"
@@ -34,11 +35,7 @@ func Subscribe(ctx context.Context, rdb *redis.Client, channel string, registry 
 				logger.Warn("dropped malformed event", "error", err)
 				continue
 			}
-			payload, err := json.Marshal(resolver.EventBody{
-				Type:     event.Type,
-				Sequence: event.Sequence,
-				Payload:  event.Payload,
-			})
+			payload, err := EventPayload(event)
 			if err != nil {
 				logger.Warn("dropped unmarshalable event", "error", err, "match_id", event.MatchID)
 				continue
@@ -46,4 +43,21 @@ func Subscribe(ctx context.Context, rdb *redis.Client, channel string, registry 
 			registry.Broadcast(event.MatchID, payload)
 		}
 	}
+}
+
+// EventPayload marshals event into the JSON shape a browser SSE
+// client receives for an "update" frame - resolver.EventBody plus
+// the event's match ID, so an unscoped (list-wide) subscriber can
+// tell which match an update is for.
+func EventPayload(event CanonicalEvent) ([]byte, error) {
+	payload, err := json.Marshal(resolver.EventBody{
+		Type:     event.Type,
+		MatchID:  event.MatchID,
+		Sequence: event.Sequence,
+		Payload:  event.Payload,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("marshal event body: %w", err)
+	}
+	return payload, nil
 }

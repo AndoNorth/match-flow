@@ -23,10 +23,14 @@ type MatchBody struct {
 }
 
 // EventBody is one event in a match's timeline, as the Gateway's REST
-// API and SSE updates both return it.
+// API and SSE updates both return it. MatchID is empty (omitted) for
+// the REST path (already scoped by the request's match ID in the
+// URL) and populated for the SSE path, where an unscoped subscriber
+// needs it to attribute an update to a match.
 type EventBody struct {
 	Payload  map[string]any `json:"payload"`
 	Type     string         `json:"type"`
+	MatchID  string         `json:"match_id,omitempty"`
 	Sequence int            `json:"sequence"`
 }
 

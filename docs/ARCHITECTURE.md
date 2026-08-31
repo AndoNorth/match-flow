@@ -261,6 +261,19 @@ Locked in ahead of the Gateway/Match Service gRPC work (Phase 4, see
   used only for the Gateway's synchronous reads from Match Service (see
   [Communication Patterns](#communication-patterns)), not for realtime
   fan-out (see [Multi-service realtime fan-out](#multi-service-realtime-fan-out)).
+- **No OpenAPI-equivalent runtime discovery for gRPC, by contrast with REST.**
+  Every service's REST routes are self-describing at runtime - Huma serves
+  `GET /docs` and `GET /openapi.json` from the route definitions themselves, so
+  the schema can never drift from the code. gRPC has no equivalent wired up here:
+  no [server reflection](https://connectrpc.com/docs/go/deployment/#reflection)
+  is registered, so nothing like `grpcurl list` works against a running service.
+  The `.proto` file (`proto/matchflow/<service>/v1/*.proto`) is the single source
+  of truth for a gRPC API's surface - read it directly, or run `buf lint`/
+  `buf breaking` (against `buf.yaml`'s config) for the closest equivalent to what
+  OpenAPI's schema validation gives REST for free. Adding reflection is a small,
+  reasonable enhancement if a runtime-introspectable gRPC surface becomes worth
+  the extra dependency (`connectrpc.com/grpcreflect`) - not done yet since nothing
+  has needed it.
   connect-go is stable and used in production, including by Buf itself.
 
 ## Cross-Cutting Concerns

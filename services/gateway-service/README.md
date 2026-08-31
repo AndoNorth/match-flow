@@ -25,11 +25,12 @@ startup and exits if it's unreachable.
 
 ## Environment variables
 
-| Variable             | Default                  | Description                     |
-|-----------------------|---------------------------|----------------------------------|
-| `PORT`                | `8083`                    | HTTP port                       |
-| `REDIS_URL`           | `redis://localhost:6379`  | Redis connection string         |
-| `MATCH_SERVICE_ADDR`  | `localhost:8082`          | Match Service's gRPC address    |
+| Variable                  | Default                  | Description                                          |
+|---------------------------|---------------------------|--------------------------------------------------------|
+| `PORT`                    | `8083`                    | HTTP port                                             |
+| `REDIS_URL`               | `redis://localhost:6379`  | Redis connection string                               |
+| `MATCH_SERVICE_ADDR`      | `localhost:8082`          | Match Service's gRPC address                          |
+| `GATEWAY_ALLOWED_ORIGIN`  | `http://localhost:3000`   | Origin allowed to call this service from a browser (`Access-Control-Allow-Origin`) - set to the frontend's real origin outside local dev |
 
 ## Talking to Match Service
 
@@ -58,4 +59,10 @@ Everything else is served by Huma - browse `GET /docs` or fetch
   match's state if `match_id` is omitted), then an `event: update`
   frame per subsequent event for that match. Verify manually with
   `curl -N http://localhost:8083/events?match_id=<id>` - no
-  buffering, prints each frame as it streams.
+  buffering, prints each frame as it streams. A `match_id` that
+  doesn't exist returns a real HTTP `404` - but the browser-native
+  `EventSource` API cannot read a response's status code or body, so
+  a frontend client only ever sees a generic `error` event and will
+  keep silently reconnecting rather than learning "this match doesn't
+  exist." Check `GET /matches/{id}` first if the caller needs to
+  distinguish "not found" from a transient connection blip.

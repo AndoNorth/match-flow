@@ -15,19 +15,21 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/AndoNorth/match-flow/services/gateway-service/internal/api"
+	"github.com/AndoNorth/match-flow/services/gateway-service/internal/cors"
 	"github.com/AndoNorth/match-flow/services/gateway-service/internal/healthz"
 	"github.com/AndoNorth/match-flow/services/gateway-service/internal/matchclient"
 	"github.com/AndoNorth/match-flow/services/gateway-service/internal/realtime"
 )
 
 const (
-	readHeaderTimeout   = 5 * time.Second
-	shutdownTimeout     = 5 * time.Second
-	redisPingTimeout    = 5 * time.Second
-	defaultRedisURL     = "redis://localhost:6379"
-	defaultPort         = "8083"
-	defaultMatchAddr    = "localhost:8082"
-	matchflowEventsChan = "matchflow:events"
+	readHeaderTimeout    = 5 * time.Second
+	shutdownTimeout      = 5 * time.Second
+	redisPingTimeout     = 5 * time.Second
+	defaultRedisURL      = "redis://localhost:6379"
+	defaultPort          = "8083"
+	defaultMatchAddr     = "localhost:8082"
+	defaultAllowedOrigin = "http://localhost:3000"
+	matchflowEventsChan  = "matchflow:events"
 )
 
 func main() {
@@ -65,10 +67,12 @@ func main() {
 	humaAPI := humago.New(mux, huma.DefaultConfig("Gateway Service", "0.1.0"))
 	api.Register(humaAPI, client)
 
+	allowedOrigin := envOr("GATEWAY_ALLOWED_ORIGIN", defaultAllowedOrigin)
+
 	port := envOr("PORT", defaultPort)
 	server := &http.Server{
 		Addr:              ":" + port,
-		Handler:           mux,
+		Handler:           cors.Middleware(allowedOrigin, mux),
 		ReadHeaderTimeout: readHeaderTimeout,
 	}
 
@@ -81,7 +85,8 @@ func main() {
 		}
 	}()
 
-	logger.Info("gateway-service listening", "port", port, "redis_url", redisURL, "match_service_addr", matchAddr)
+	logger.Info("gateway-service listening",
+		"port", port, "redis_url", redisURL, "match_service_addr", matchAddr, "allowed_origin", allowedOrigin)
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		logger.Error("server failed", "error", err)
 		os.Exit(1)

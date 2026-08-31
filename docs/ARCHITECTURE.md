@@ -23,9 +23,13 @@ flowchart LR
     ING -- "publish" --> REDIS[("Redis<br/>pub/sub")]
     REDIS -- "subscribe" --> MATCH["Match Service<br/>(Go)"]
     MATCH -- "read/write" --> PG[("PostgreSQL")]
-    MATCH -- "gRPC" --> GW["Gateway Service<br/>(Go)"]
+    MATCH -- "gRPC (reads)" --> GW["Gateway Service<br/>(Go)"]
+    REDIS -- "subscribe (fan-out)" --> GW
     GW -- "REST (initial/on-demand)" --> FE["Frontend Application<br/>(Next.js/React/TS)"]
     GW -- "SSE (realtime push)" --> FE
+
+    ODDS["Odds Service<br/>(Go, planned)"] -. "publish" .-> REDIS
+    ODDS -. "gRPC (reads)" .-> GW
 
     FS -.->|OTel| OBS
     ING -.->|OTel| OBS
@@ -35,13 +39,19 @@ flowchart LR
 
     classDef svc fill:#1e293b,stroke:#64748b,color:#e2e8f0;
     classDef infra fill:#0f172a,stroke:#38bdf8,color:#e2e8f0;
+    classDef planned fill:#1e293b,stroke:#64748b,color:#e2e8f0,stroke-dasharray: 4 3;
     class FS,ING,MATCH,GW,FE svc;
     class REDIS,PG,OBS infra;
+    class ODDS planned;
 ```
 
 Frontend never talks directly to Match Service, Ingestion Service, or
-Redis - only through the Gateway. Dashed lines are cross-cutting
-observability (Phase 6), not the request path.
+Redis - only through the Gateway.
+Dashed edges to `OBS` are cross-cutting observability (Phase 6), not the request path.
+The dashed `Odds Service` node is not built yet - it's shown to make explicit that a second domain
+service joins the system the same way Match Service does: publish to Redis, expose reads over
+gRPC, no new fan-out mechanism required (see
+[Multi-service realtime fan-out](#multi-service-realtime-fan-out) below).
 
 ## Services
 
@@ -65,6 +75,12 @@ arrives in" and "the shape the rest of the system relies on."
 Maintains current match state, built from the event stream. Exposes
 match-related APIs and provides match information to other services.
 The system of record for "what is currently true about a match."
+
+Exposes reads two ways: REST (via Huma, its original client-facing shape) and gRPC (via
+connect-go, added for the Gateway's synchronous queries - see
+[Communication Patterns](#communication-patterns)). Both stay - the REST API was already built,
+tested, and works; there's no reason to remove it just because the Gateway needs a typed gRPC
+contract too.
 
 ### Gateway Service
 
@@ -94,6 +110,54 @@ was published while it was disconnected. The Gateway is responsible for
 backfilling current state from the Match Service's API on (re)connect,
 rather than assuming Redis has anything to replay.
 
+### Multi-service realtime fan-out
+
+More than one backend domain service will eventually publish updates that the same client
+needs: Match Service today, an Odds Service later.
+The Gateway subscribes directly to Redis on each domain's channel and multiplexes them into one
+SSE stream per client, rather than each domain service pushing to the Gateway over its own
+gRPC stream.
+
+This is a deliberate choice, not the default because it was already there.
+A gRPC server-streaming RPC per domain service was considered - it would mean the Gateway
+holding a persistent stream per upstream service just to re-multiplex what a broker already does
+for free, and a new persistent connection to manage and reconnect per service as the service
+count grows.
+A dedicated aggregation/fan-out tier in front of the Gateway was also considered - that pattern
+(e.g. Fastly's Fanout) earns its cost at millions-of-concurrent-connections, multi-region scale;
+at MatchFlow's scale the Gateway already is that edge tier, so a second tier would be a layer
+introduced for a scaling problem that doesn't exist yet.
+
+Broker-side fan-out to a single edge tier is also how comparable real systems are built, not
+just the cheapest option available here: a documented real-time betting platform built on
+Confluent/Kafka has domain services publish odds updates onto topics, with one edge layer
+(Ably) subscribing across topics and fanning out per client - domain services never talk to the
+edge layer or to individual clients directly ([Confluent: Building a Real-Time Betting Platform
+with Confluent Cloud and Ably](https://www.confluent.io/blog/real-time-betting-platform-with-confluent-cloud-and-ably/)).
+Betfair's own client-facing Stream API follows the same shape at the edge: one stream, many
+market subscriptions multiplexed over it, an initial full snapshot followed by deltas
+([Betfair: Market & Order Stream API - How it works](https://support.developer.betfair.com/hc/en-us/articles/360000402291-Market-Order-Stream-API-How-does-it-work)) -
+worth mirroring in the Gateway's own SSE payload shape (a full match/odds snapshot on connect,
+deltas after) independent of the transport question.
+The synchronous/asynchronous split lines up with general industry guidance too: gRPC (or
+synchronous RPC generally) for request/response paths, a broker for downstream event
+distribution and fan-out
+([iGaming Platform Microservices Architecture Guide](https://www.babble.uk.com/igaming-platform-microservices-architecture/)) -
+which is exactly the Gateway's split between gRPC reads from Match Service and a direct Redis
+subscription for realtime push.
+
+**Why SSE, not WebSocket, even for a betting-adjacent feed.** Betting/exchange systems often
+reach for WebSocket, but mainly because their channel is bidirectional (placing or cancelling an
+order over the same connection) or latency-critical in a way a pure score/odds push isn't.
+SSE is proven at real production scale for one-way feeds specifically: Shopify's BFCM Live Map
+served 323 billion events over millions of concurrent SSE connections at sub-300ms latency,
+choosing SSE over WebSocket precisely because the feed was one-way
+([Shopify Engineering: Using Server-Sent Events to Simplify Real-time Streaming at
+Scale](https://shopify.engineering/server-sent-events-data-streaming)). MatchFlow's Gateway feed
+is one-way (score/odds push, no client-initiated action riding the same connection), so SSE
+stays the right default; WebSocket remains the documented upgrade path in
+[Gateway Service](#gateway-service) above if a bidirectional need appears.
+
 **Talking to Match Service over gRPC.** The Gateway is a REST/SSE
 service on its client-facing side and a gRPC client on its backend
 side - the same "gateway fronting typed internal services" shape shows
@@ -109,11 +173,14 @@ Three pieces make that translation clean rather than ad hoc:
   (`NOT_FOUND`, `INVALID_ARGUMENT`, ...) maps to an HTTP status
   (`404`, `400`, ...) in one place, so every route doesn't hand-roll
   its own mapping.
-- **Service addresses via environment variable**, defaulting to a
-  Kubernetes-DNS-shaped hostname (e.g.
-  `match-service.matchflow.svc.cluster.local:<port>`) for the
-  in-cluster case, overridable for local dev (plain `localhost:<port>`
-  when running outside Kind/Tilt). One config surface, not a
+- **Service addresses via environment variable**, defaulting to plain
+  `localhost:<port>` for now - every other cross-service address in
+  this repo (`REDIS_URL`, `POSTGRES_DSN`) already defaults the same
+  way, since no service has run anywhere but locally or in the
+  Compose/Kind dev loops yet. A Kubernetes-DNS-shaped hostname (e.g.
+  `match-service.matchflow.svc.cluster.local:<port>`) becomes the
+  override once a real deployment manifest sets it (Phase 8, see
+  [ROADMAP.md](ROADMAP.md)) - one config surface either way, not a
   hardcoded address baked into either environment.
 
 ### Frontend Application
@@ -151,9 +218,13 @@ Match Service, Ingestion Service, or Redis.
   (via Huma).
 - **Ingestion Service -> Redis**: event publication for distribution.
 - **Match Service**: consumes distributed events from Redis to update
-  state; exposes that state via REST/gRPC to other services.
-- **Gateway Service -> Match Service**: service-to-service queries,
-  favoring gRPC where a typed contract is valuable.
+  state; exposes that state via REST (existing) and gRPC (for the Gateway) to other services.
+- **Gateway Service -> Match Service**: synchronous reads (list matches, get a match, backfill
+  on connect) over gRPC/[connect-go](https://connectrpc.com/) - a typed contract for
+  request/response queries.
+- **Gateway Service -> Redis**: direct subscription to each domain service's publish channel
+  (`matchflow:events` today, an Odds Service channel later) for realtime fan-out - see
+  [Multi-service realtime fan-out](#multi-service-realtime-fan-out).
 - **Gateway Service -> Frontend Application**: REST for initial/on-demand
   data (server-rendered pages, one-off queries), Server-Sent Events (SSE)
   as the default realtime channel for push updates applied client-side
@@ -161,13 +232,13 @@ Match Service, Ingestion Service, or Redis.
 
 ## Protobuf & gRPC Structure
 
-Doesn't exist yet (no service calls gRPC until Phase 4, see
-[ROADMAP.md](ROADMAP.md)), but the shape is decided so it's built once,
-not guessed at per-service later:
+Locked in ahead of the Gateway/Match Service gRPC work (Phase 4, see
+[ROADMAP.md](ROADMAP.md)) so it's built once, not guessed at per-service later:
 
-- **`proto/matchflow/<service>/*.proto`** - source protobuf definitions,
+- **`proto/matchflow/<service>/v1/*.proto`** - source protobuf definitions (`syntax = "proto3"`),
   one directory per service that exposes a gRPC API.
-- **`gen/go/<service>/`** - generated Go stubs, checked in rather than
+- **`gen/go/matchflow/<service>/v1/`** - generated Go stubs (mirrors the proto
+  source path via buf's `paths=source_relative`), checked in rather than
   generated on every build (so a checkout builds without also invoking
   the proto toolchain). Regenerated via a single command when a
   `.proto` file changes.
@@ -176,11 +247,34 @@ not guessed at per-service later:
   consume the same contracts across repo boundaries - two devs and four
   services in one repo don't have that problem, and a separate repo
   would just be a second place to keep in sync with every API change.
-- **Codegen tool**: not yet chosen between plain `protoc` +
-  `protoc-gen-go` + `protoc-gen-go-grpc` (maximum compatibility, more
-  manual wiring) and `buf` (lint + breaking-change detection + simpler
-  config, the more common modern default) - a soft lean toward `buf`
-  since nothing here has a compatibility reason to avoid it.
+- **Codegen tool: [buf](https://buf.build/).** buf is now the mainstream
+  default for new Go protobuf projects - checked-in, versioned config
+  (`buf.yaml`/`buf.gen.yaml`), lint, and breaking-change detection against
+  a base branch, none of which plain `protoc` provides on its own. The
+  one real reason a project avoids buf - its compiler reimplementing new
+  protobuf language features (e.g. proto edition 2024) later than Google's
+  own `protoc` - doesn't apply here, since this repo targets plain
+  `syntax = "proto3"`, which buf has supported natively for years.
+- **RPC framework: [connect-go](https://connectrpc.com/) (`connectrpc.com/connect`).**
+  Generated from the same `.proto` files via buf, but the generated
+  service also speaks plain HTTP/JSON in addition to gRPC and gRPC-Web -
+  used only for the Gateway's synchronous reads from Match Service (see
+  [Communication Patterns](#communication-patterns)), not for realtime
+  fan-out (see [Multi-service realtime fan-out](#multi-service-realtime-fan-out)).
+- **No OpenAPI-equivalent runtime discovery for gRPC, by contrast with REST.**
+  Every service's REST routes are self-describing at runtime - Huma serves
+  `GET /docs` and `GET /openapi.json` from the route definitions themselves, so
+  the schema can never drift from the code. gRPC has no equivalent wired up here:
+  no [server reflection](https://connectrpc.com/docs/go/deployment/#reflection)
+  is registered, so nothing like `grpcurl list` works against a running service.
+  The `.proto` file (`proto/matchflow/<service>/v1/*.proto`) is the single source
+  of truth for a gRPC API's surface - read it directly, or run `buf lint`/
+  `buf breaking` (against `buf.yaml`'s config) for the closest equivalent to what
+  OpenAPI's schema validation gives REST for free. Adding reflection is a small,
+  reasonable enhancement if a runtime-introspectable gRPC surface becomes worth
+  the extra dependency (`connectrpc.com/grpcreflect`) - not done yet since nothing
+  has needed it.
+  connect-go is stable and used in production, including by Buf itself.
 
 ## Cross-Cutting Concerns
 

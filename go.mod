@@ -3,6 +3,7 @@ module github.com/AndoNorth/match-flow
 go 1.26.7
 
 require (
+	connectrpc.com/connect v1.20.0
 	github.com/danielgtaylor/huma/v2 v2.39.1
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/onsi/ginkgo/v2 v2.32.1
@@ -11,6 +12,7 @@ require (
 	github.com/redis/go-redis/v9 v9.22.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.44.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.44.0
+	google.golang.org/protobuf v1.36.11
 )
 
 require (

@@ -16,6 +16,7 @@ const match: MatchBody = {
   home_score: 0,
   away_score: 0,
   clock_mins: 10,
+  created_at: "2026-08-31T12:00:00Z",
 };
 const kickoff: EventBody = { type: "kickoff", sequence: 1, payload: {} };
 

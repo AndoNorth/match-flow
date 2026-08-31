@@ -1,11 +1,20 @@
 import "@testing-library/jest-dom/vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as realtime from "@/lib/gateway/realtime";
 import type { EventBody, MatchBody } from "@/lib/gateway/types";
 import { LiveMatchList } from "./LiveMatchList";
 
 vi.mock("@/lib/gateway/realtime");
+
+const now = new Date().toISOString();
+const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
 
 const scheduled: MatchBody = {
   match_id: "s1",
@@ -16,6 +25,7 @@ const scheduled: MatchBody = {
   home_score: 0,
   away_score: 0,
   clock_mins: 0,
+  created_at: now,
 };
 const live: MatchBody = {
   match_id: "l1",
@@ -26,6 +36,7 @@ const live: MatchBody = {
   home_score: 1,
   away_score: 0,
   clock_mins: 10,
+  created_at: now,
 };
 const finished: MatchBody = {
   match_id: "f1",
@@ -36,6 +47,18 @@ const finished: MatchBody = {
   home_score: 2,
   away_score: 2,
   clock_mins: 90,
+  created_at: now,
+};
+const oldFinished: MatchBody = {
+  match_id: "f2",
+  sport: "football",
+  status: "full_time",
+  home_team: "Kingswell Albion",
+  away_team: "Lambourne FC",
+  home_score: 1,
+  away_score: 1,
+  clock_mins: 90,
+  created_at: twoHoursAgo,
 };
 
 let onUpdate: (event: EventBody) => void;
@@ -54,9 +77,43 @@ afterEach(cleanup);
 describe("LiveMatchList", () => {
   it("renders each initial match under its mapped tab", () => {
     render(<LiveMatchList initialMatches={[scheduled, live, finished]} />);
-    expect(screen.getByRole("tab", { name: "Scheduled" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Live" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Finished" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Scheduled/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Live/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Finished/ })).toBeInTheDocument();
+  });
+
+  it("shows a count next to each tab", () => {
+    render(<LiveMatchList initialMatches={[scheduled, live, finished]} />);
+    expect(
+      screen.getByRole("tab", { name: "Scheduled (1)" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Live (1)" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: "Finished (1)" }),
+    ).toBeInTheDocument();
+  });
+
+  it("only counts and shows matches within the selected time range", () => {
+    render(<LiveMatchList initialMatches={[live, finished, oldFinished]} />);
+    expect(
+      screen.getByRole("tab", { name: "Finished (2)" }),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Time range"), {
+      target: { value: "1h" },
+    });
+
+    expect(
+      screen.getByRole("tab", { name: "Finished (1)" }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Finished (1)" }));
+    expect(
+      screen.getByText("Harrowgate Town vs Ironbridge Wanderers"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Kingswell Albion vs Lambourne FC"),
+    ).not.toBeInTheDocument();
   });
 
   it("defaults to the Live tab active, showing the live match", () => {

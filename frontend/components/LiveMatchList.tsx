@@ -17,6 +17,20 @@ function tabFor(status: MatchBody["status"]): Tab {
   return "Finished";
 }
 
+type TimeFilter = "all" | "1h" | "24h";
+// null means no cutoff - every match passes.
+const TIME_FILTER_WINDOW_MS: Record<TimeFilter, number | null> = {
+  all: null,
+  "1h": 60 * 60 * 1000,
+  "24h": 24 * 60 * 60 * 1000,
+};
+
+function withinTimeFilter(match: MatchBody, filter: TimeFilter): boolean {
+  const windowMs = TIME_FILTER_WINDOW_MS[filter];
+  if (windowMs === null) return true;
+  return Date.now() - new Date(match.created_at).getTime() <= windowMs;
+}
+
 function toMap(matches: MatchBody[]): Record<string, MatchBody> {
   return Object.fromEntries(matches.map((m) => [m.match_id, m]));
 }
@@ -30,6 +44,7 @@ export function LiveMatchList({
     toMap(initialMatches),
   );
   const [activeTab, setActiveTab] = useState<Tab>("Live");
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [connected, setConnected] = useState(true);
   const lastSequence = useRef<Record<string, number>>({});
 
@@ -61,26 +76,41 @@ export function LiveMatchList({
     return unsubscribe;
   }, []);
 
-  const visible = Object.values(matches).filter(
-    (m) => tabFor(m.status) === activeTab,
+  const inRange = Object.values(matches).filter((m) =>
+    withinTimeFilter(m, timeFilter),
   );
+  const countFor = (tab: Tab) =>
+    inRange.filter((m) => tabFor(m.status) === tab).length;
+  const visible = inRange.filter((m) => tabFor(m.status) === activeTab);
 
   return (
     <div>
       <Navbar connected={connected} />
       <ConnectionIndicator connected={connected} />
-      <div role="tablist" className="tabs tabs-box mb-4">
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            role="tab"
-            className={`tab ${tab === activeTab ? "tab-active" : ""}`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab}
-          </button>
-        ))}
+      <div className="flex items-center justify-between mb-4 gap-4">
+        <div role="tablist" className="tabs tabs-box">
+          {TABS.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              className={`tab ${tab === activeTab ? "tab-active" : ""}`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {tab} ({countFor(tab)})
+            </button>
+          ))}
+        </div>
+        <select
+          aria-label="Time range"
+          className="select select-sm w-auto"
+          value={timeFilter}
+          onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
+        >
+          <option value="all">All time</option>
+          <option value="1h">Last hour</option>
+          <option value="24h">Last 24h</option>
+        </select>
       </div>
       <div className="flex flex-col gap-2">
         {visible.map((match) => (

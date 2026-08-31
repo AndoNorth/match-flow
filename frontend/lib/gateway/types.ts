@@ -9,6 +9,7 @@ export interface MatchBody {
   home_score: number;
   away_score: number;
   clock_mins: number;
+  created_at: string;
 }
 
 export interface EventBody {

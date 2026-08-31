@@ -11,6 +11,7 @@ const base: MatchBody = {
   home_score: 0,
   away_score: 0,
   clock_mins: 0,
+  created_at: "2026-08-31T12:00:00Z",
 };
 
 describe("reduce", () => {

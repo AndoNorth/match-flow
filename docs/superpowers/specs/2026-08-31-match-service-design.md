@@ -132,9 +132,14 @@ land on Redis and are gone the instant nobody's listening.
 
 **Package layout**, mirroring #2's split:
 
-- `cmd/match-service/main.go` - wiring only: load config, run Goose migrations,
-  connect Postgres and Redis, build the worker pool, construct the Huma API,
-  start the HTTP server, handle graceful shutdown.
+- `cmd/match-service/main.go` - wiring only: load config, open the Postgres
+  connection, run Goose migrations against it (`goose.Up`, via the
+  `github.com/pressly/goose/v3` library, not the CLI - the CLI is added to
+  `flake.nix` only for local authoring/rollback, never required at runtime),
+  connect Redis, build the worker pool, construct the Huma API, start the
+  HTTP server, handle graceful shutdown. Migrations run and complete before
+  the HTTP server or subscriber starts, so no request or event is ever
+  served against an unmigrated schema.
 - `internal/eventstream` - subscribes to `matchflow:events`, decodes each
   message into `normalize.CanonicalEvent` (same struct shape Ingestion
   publishes - duplicated here rather than imported, since the two services
@@ -153,6 +158,11 @@ land on Redis and are gone the instant nobody's listening.
   transaction (upsert `matches`, insert `match_events`). `Reduce` never
   compares the original event-type string, only `Rule.Category`/
   `Rule.Status`.
+- `internal/matchstate/migrations` - the Goose SQL migration files
+  (`NNNN_create_matches.sql`, `NNNN_create_match_events.sql`), embedded into
+  the binary via `//go:embed migrations/*.sql` so `goose.Up` doesn't depend
+  on the migrations directory existing on disk at runtime (matters for a
+  container image in Phase 7).
 - `internal/api` - Huma route registration for the three read-only routes,
   reading from Postgres.
 - `internal/healthz` - same tiny package pattern as the other two services.
@@ -367,8 +377,10 @@ PORT                          # 8082, Makefile-registered as PORT_match-service
 MATCH_SERVICE_WORKERS         # default 4
 MATCH_SERVICE_DEFAULT_SPORT   # default "football"; written once per match at creation
 REDIS_URL                     # default redis://localhost:6379
-POSTGRES_DSN
+POSTGRES_DSN                  # default postgres://matchflow:matchflow@localhost:5432/matchflow?sslmode=disable
 ```
+
+`POSTGRES_DSN`'s default matches `docker-compose.dev.yml`'s Postgres credentials/port exactly - same convention `REDIS_URL`'s default already follows for Ingestion's Redis.
 
 ## Validation
 

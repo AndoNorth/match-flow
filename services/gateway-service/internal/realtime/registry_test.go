@@ -1,6 +1,9 @@
 package realtime_test
 
 import (
+	"fmt"
+	"sync"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -50,6 +53,37 @@ var _ = Describe("Registry", func() {
 		// blocked delivery to it.
 		for range cap(fastCh) {
 			Expect(<-fastCh).To(Equal([]byte("x")))
+		}
+	})
+
+	It("keeps every client registered when many Register calls race on the same registry", func() {
+		reg := realtime.NewRegistry()
+		const n = 50
+
+		chs := make([]<-chan []byte, n)
+		unregs := make([]func(), n)
+		var wg sync.WaitGroup
+		wg.Add(n)
+		for i := range n {
+			go func(i int) {
+				defer wg.Done()
+				ch, unreg := reg.Register(fmt.Sprintf("match-%d", i))
+				chs[i] = ch
+				unregs[i] = unreg
+			}(i)
+		}
+		wg.Wait()
+		defer func() {
+			for _, unreg := range unregs {
+				unreg()
+			}
+		}()
+
+		for i := range n {
+			reg.Broadcast(fmt.Sprintf("match-%d", i), []byte(fmt.Sprintf("payload-%d", i)))
+		}
+		for i := range n {
+			Expect(<-chs[i]).To(Equal([]byte(fmt.Sprintf("payload-%d", i))))
 		}
 	})
 

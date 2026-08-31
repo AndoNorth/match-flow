@@ -41,7 +41,7 @@ without a redesign.
   match (or to every client that requested no specific match), backfilling current match state
   via the gRPC client on (re)connect.
 - `buf` + `connect-go` codegen is established under `proto/matchflow/<service>/v1/` and
-  `gen/go/<service>_v1/`, in a shape a future Odds Service can reuse without inventing a second
+  `gen/go/matchflow/<service>/v1/`, in a shape a future Odds Service can reuse without inventing a second
   convention.
 - The SSE endpoint can be verified manually with `curl -N` alone, since no frontend client
   exists yet.
@@ -84,7 +84,7 @@ module rooted at `proto/` (a buf v2 `modules: [{path: proto}]` entry in the root
 repo root). Import paths inside `.proto` files are therefore written relative to `proto/`, e.g.
 `import "matchflow/match_service/v1/match_service.proto";`, never prefixed with `proto/` -
 the one convention a future Odds Service's `.proto` files must follow to avoid a second,
-inconsistent import shape. Generated Go lands in `gen/go/match_service_v1/` as plain packages in
+inconsistent import shape. Generated Go lands in `gen/go/matchflow/match_service/v1/` as plain packages in
 the existing single Go module (`github.com/AndoNorth/match-flow`) - no per-package `go.mod`
 needed, unlike the multi-module reference this convention was adapted from, because that module
 split exists there to let many independent external consumers pin different versions across repo

@@ -237,7 +237,8 @@ Locked in ahead of the Gateway/Match Service gRPC work (Phase 4, see
 
 - **`proto/matchflow/<service>/v1/*.proto`** - source protobuf definitions (`syntax = "proto3"`),
   one directory per service that exposes a gRPC API.
-- **`gen/go/<service>_v1/`** - generated Go stubs, checked in rather than
+- **`gen/go/matchflow/<service>/v1/`** - generated Go stubs (mirrors the proto
+  source path via buf's `paths=source_relative`), checked in rather than
   generated on every build (so a checkout builds without also invoking
   the proto toolchain). Regenerated via a single command when a
   `.proto` file changes.

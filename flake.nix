@@ -109,6 +109,7 @@
             golines
             air
             goose
+            buf
 
             # Frontend toolchain
             nodejs_22

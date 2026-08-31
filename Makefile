@@ -1,4 +1,4 @@
-.PHONY: dev-setup dev-infra dev-infra-down dev-infra-clean dev-all dev-clean check-infra-ports check-docker check-service-port build run test test-integration lint dev-k8s dev-k8s-down help
+.PHONY: dev-setup dev-infra dev-infra-down dev-infra-clean dev-all dev-clean check-infra-ports check-docker check-service-port build run test test-integration lint gen-proto dev-k8s dev-k8s-down help
 
 dev-setup: dev-infra ## One-time bootstrap - bring up infra, ready to start building
 	@echo "Infra is up (Redis, Postgres). Run 'nix develop' (or let direnv load it) to get the toolchain."
@@ -55,6 +55,9 @@ test-integration: check-docker ## Run integration tests for a service - make tes
 lint: ## Lint a service - make lint SVC=<name>
 	@test -n "$(SVC)" || { echo "SVC=<name> is required"; exit 1; }
 	golangci-lint run ./services/$(SVC)/...
+
+gen-proto: ## Regenerate Go stubs from .proto files
+	buf generate
 
 dev-k8s: check-docker ## Start the local K8s dev loop (Kind cluster + Tilt: Redis, Postgres, observability)
 	kind get clusters | grep -qx matchflow || kind create cluster --name matchflow --config k8s/local/kind-config.yaml

@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package matchflow.match_service.v1;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/AndoNorth/match-flow/gen/go/matchflow/match_service/v1;matchservicev1";
+
+message Match {
+  string match_id = 1;
+  string sport = 2;
+  string status = 3;
+  int32 home_score = 4;
+  int32 away_score = 5;
+  int32 clock_mins = 6;
+}
+
+message MatchEvent {
+  string type = 1;
+  int32 sequence = 2;
+  google.protobuf.Struct payload = 3;
+}
+
+message ListMatchesRequest {
+  string status = 1;
+}
+
+message ListMatchesResponse {
+  repeated Match matches = 1;
+}
+
+message GetMatchRequest {
+  string match_id = 1;
+}
+
+message ListMatchEventsRequest {
+  string match_id = 1;
+}
+
+message ListMatchEventsResponse {
+  repeated MatchEvent events = 1;
+}
+
+service MatchService {
+  rpc ListMatches(ListMatchesRequest) returns (ListMatchesResponse);
+  rpc GetMatch(GetMatchRequest) returns (Match);
+  rpc ListMatchEvents(ListMatchEventsRequest) returns (ListMatchEventsResponse);
+}

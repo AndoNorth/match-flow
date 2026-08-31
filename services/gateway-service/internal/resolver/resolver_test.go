@@ -3,12 +3,14 @@ package resolver_test
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/danielgtaylor/huma/v2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	matchservicev1 "github.com/AndoNorth/match-flow/gen/go/matchflow/match_service/v1"
 	"github.com/AndoNorth/match-flow/services/gateway-service/internal/resolver"
@@ -16,13 +18,18 @@ import (
 
 var _ = Describe("Match", func() {
 	It("converts every field", func() {
+		createdAt := time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC)
 		body := resolver.Match(&matchservicev1.Match{
 			MatchId: "match-1", Sport: "football", Status: "live",
+			HomeTeam: "Ashford United", AwayTeam: "Denbury City",
 			HomeScore: 1, AwayScore: 2, ClockMins: 45,
+			CreatedAt: timestamppb.New(createdAt),
 		})
 		Expect(body).To(Equal(resolver.MatchBody{
 			MatchID: "match-1", Sport: "football", Status: "live",
+			HomeTeam: "Ashford United", AwayTeam: "Denbury City",
 			HomeScore: 1, AwayScore: 2, ClockMins: 45,
+			CreatedAt: createdAt,
 		}))
 	})
 })

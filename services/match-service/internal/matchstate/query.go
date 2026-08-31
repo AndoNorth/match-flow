@@ -17,6 +17,7 @@ var ErrNotFound = errors.New("match not found")
 // MatchRecord is a match's current state, as read from the matches
 // table.
 type MatchRecord struct {
+	CreatedAt time.Time
 	MatchID   string
 	Sport     string
 	Status    string
@@ -38,7 +39,9 @@ type EventRecord struct {
 // ListMatches returns every match, or only those with the given
 // status if it's non-empty.
 func (s *Store) ListMatches(ctx context.Context, status string) ([]MatchRecord, error) {
-	query := `SELECT match_id, sport, status, home_team, away_team, home_score, away_score, clock_mins FROM matches`
+	query := `
+		SELECT match_id, sport, status, home_team, away_team, home_score, away_score, clock_mins, created_at
+		FROM matches`
 	args := []any{}
 	if status != "" {
 		query += ` WHERE status = $1`
@@ -57,6 +60,7 @@ func (s *Store) ListMatches(ctx context.Context, status string) ([]MatchRecord, 
 		var r MatchRecord
 		if err := rows.Scan(
 			&r.MatchID, &r.Sport, &r.Status, &r.HomeTeam, &r.AwayTeam, &r.HomeScore, &r.AwayScore, &r.ClockMins,
+			&r.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan match row: %w", err)
 		}
@@ -72,9 +76,11 @@ func (s *Store) ListMatches(ctx context.Context, status string) ([]MatchRecord, 
 func (s *Store) GetMatch(ctx context.Context, matchID string) (MatchRecord, error) {
 	var r MatchRecord
 	err := s.pool.QueryRow(ctx, `
-		SELECT match_id, sport, status, home_team, away_team, home_score, away_score, clock_mins
+		SELECT match_id, sport, status, home_team, away_team, home_score, away_score, clock_mins, created_at
 		FROM matches WHERE match_id = $1
-	`, matchID).Scan(&r.MatchID, &r.Sport, &r.Status, &r.HomeTeam, &r.AwayTeam, &r.HomeScore, &r.AwayScore, &r.ClockMins)
+	`, matchID).Scan(
+		&r.MatchID, &r.Sport, &r.Status, &r.HomeTeam, &r.AwayTeam, &r.HomeScore, &r.AwayScore, &r.ClockMins, &r.CreatedAt,
+	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return MatchRecord{}, ErrNotFound
 	}

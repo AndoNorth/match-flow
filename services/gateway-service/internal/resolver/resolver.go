@@ -5,6 +5,8 @@
 package resolver
 
 import (
+	"time"
+
 	"connectrpc.com/connect"
 	"github.com/danielgtaylor/huma/v2"
 
@@ -14,14 +16,15 @@ import (
 // MatchBody is a match's current state, as the Gateway's REST API and
 // SSE snapshot both return it.
 type MatchBody struct {
-	MatchID   string `json:"match_id"`
-	Sport     string `json:"sport"`
-	Status    string `json:"status"`
-	HomeTeam  string `json:"home_team"`
-	AwayTeam  string `json:"away_team"`
-	HomeScore int    `json:"home_score"`
-	AwayScore int    `json:"away_score"`
-	ClockMins int    `json:"clock_mins"`
+	CreatedAt time.Time `json:"created_at"`
+	MatchID   string    `json:"match_id"`
+	Sport     string    `json:"sport"`
+	Status    string    `json:"status"`
+	HomeTeam  string    `json:"home_team"`
+	AwayTeam  string    `json:"away_team"`
+	HomeScore int       `json:"home_score"`
+	AwayScore int       `json:"away_score"`
+	ClockMins int       `json:"clock_mins"`
 }
 
 // EventBody is one event in a match's timeline, as the Gateway's REST
@@ -47,6 +50,7 @@ func Match(m *matchservicev1.Match) MatchBody {
 		HomeScore: int(m.GetHomeScore()),
 		AwayScore: int(m.GetAwayScore()),
 		ClockMins: int(m.GetClockMins()),
+		CreatedAt: m.GetCreatedAt().AsTime(),
 	}
 }
 

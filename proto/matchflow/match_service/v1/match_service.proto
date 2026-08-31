@@ -3,6 +3,7 @@ syntax = "proto3";
 package matchflow.match_service.v1;
 
 import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/AndoNorth/match-flow/gen/go/matchflow/match_service/v1;matchservicev1";
 
@@ -15,6 +16,7 @@ message Match {
   int32 clock_mins = 6;
   string home_team = 7;
   string away_team = 8;
+  google.protobuf.Timestamp created_at = 9;
 }
 
 message MatchEvent {

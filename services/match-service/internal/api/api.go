@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 
@@ -24,14 +25,15 @@ type reader interface {
 }
 
 type matchBody struct {
-	MatchID   string `json:"match_id"`
-	Sport     string `json:"sport"`
-	Status    string `json:"status"`
-	HomeTeam  string `json:"home_team"`
-	AwayTeam  string `json:"away_team"`
-	HomeScore int    `json:"home_score"`
-	AwayScore int    `json:"away_score"`
-	ClockMins int    `json:"clock_mins"`
+	CreatedAt time.Time `json:"created_at"`
+	MatchID   string    `json:"match_id"`
+	Sport     string    `json:"sport"`
+	Status    string    `json:"status"`
+	HomeTeam  string    `json:"home_team"`
+	AwayTeam  string    `json:"away_team"`
+	HomeScore int       `json:"home_score"`
+	AwayScore int       `json:"away_score"`
+	ClockMins int       `json:"clock_mins"`
 }
 
 type matchOutput struct {
@@ -129,5 +131,6 @@ func toMatchBody(r matchstate.MatchRecord) matchBody {
 		MatchID: r.MatchID, Sport: r.Sport, Status: r.Status,
 		HomeTeam: r.HomeTeam, AwayTeam: r.AwayTeam,
 		HomeScore: r.HomeScore, AwayScore: r.AwayScore, ClockMins: r.ClockMins,
+		CreatedAt: r.CreatedAt,
 	}
 }

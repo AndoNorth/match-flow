@@ -218,4 +218,31 @@ buffering, prints each chunk as it streams) rather than a browser.
 | REST backfill | `curl http://localhost:8083/matches/<id>` | Returns the same JSON shape and data as `curl http://localhost:8082/matches/<id>` (Match Service directly) |
 | Not-found mapping | `curl -i http://localhost:8083/matches/does-not-exist` | HTTP `404`, not `500` |
 
-Results to be appended here once run against a live `make dev-infra` + both services.
+### Results (2026-08-31, Task 12)
+
+Run against `make dev-infra` (Postgres, Redis, otel-lgtm) plus `make run SVC=match-service` and
+`make run SVC=gateway-service`, both listening on their default ports (8082, 8083).
+
+Only the two SSE-specific rows below were exercised in this pass - the automated integration
+test added in this task (`api_integration_test.go`) already covers the REST backfill and
+not-found mapping rows end-to-end against a real match-service process, and multi-client /
+slow-client behavior is exercised by `internal/realtime`'s existing unit suite, not manual QA.
+
+- **Snapshot on connect**: `curl -N "http://localhost:8083/events?match_id=match-1"` against an
+  already-seeded `match-1`. First frame received immediately:
+  ```
+  event: snapshot
+  data: {"match_id":"match-1","sport":"football","status":"full_time","home_score":1,"away_score":1,"clock_mins":91}
+  ```
+  Matches expected: `event: snapshot` arrives first, carrying current match state.
+
+- **Live delta delivery**: with that connection open, published to `matchflow:events` via
+  `redis-cli PUBLISH matchflow:events '{"match_id":"match-1","type":"goal","sequence":91,"payload":{"team":"home","minute":91},"timestamp":"2026-08-31T00:00:00Z","ingested_at":"2026-08-31T00:00:00Z","provider":"manual-test"}'`.
+  A second frame arrived on the same connection within about two seconds, with no reconnect or
+  polling:
+  ```
+  event: update
+  data: {"payload":{"minute":91,"team":"home"},"sequence":91,"type":"goal"}
+  ```
+  Matches expected: a new `event: update` frame arrives immediately, reflecting the published
+  event.

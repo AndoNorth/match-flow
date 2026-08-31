@@ -58,10 +58,13 @@ type notFoundError struct{ id string }
 
 func (e *notFoundError) Error() string { return "no such match: " + e.id }
 
+func humaAPIForTest(mux *http.ServeMux) huma.API {
+	return humago.New(mux, huma.DefaultConfig("test", "0.0.0"))
+}
+
 func newTestServer(client *fakeClient) *httptest.Server {
 	mux := http.NewServeMux()
-	humaAPI := humago.New(mux, huma.DefaultConfig("test", "0.0.0"))
-	api.Register(humaAPI, client)
+	api.Register(humaAPIForTest(mux), client)
 	return httptest.NewServer(mux)
 }
 

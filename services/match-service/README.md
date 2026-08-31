@@ -48,5 +48,10 @@ second, hand-maintained copy of the same thing here.
 - `GET /matches/{id}/events` - a match's full event timeline, ordered by
   sequence. `404` for an unknown match ID.
 
+A gRPC (connect-go) API is also mounted on the same port, at path prefix
+`/matchflow.match_service.v1.MatchService/`, exposing the same three reads as
+the REST routes above (`ListMatches`, `GetMatch`, `ListMatchEvents`) - this is
+what Gateway Service talks to.
+
 Nothing here creates or mutates a match - state comes entirely from the
 `matchflow:events` Redis channel Ingestion Service publishes to.

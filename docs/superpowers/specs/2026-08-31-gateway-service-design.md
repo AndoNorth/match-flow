@@ -171,10 +171,12 @@ Whether that's a second named channel or a pattern-subscribe is an open question
 - **Gateway**: unit tests for `internal/resolver`'s REST<->protobuf conversion and its gRPC-to-HTTP
   status mapping, using a fake `matchclient`. Unit tests for `internal/realtime`'s fan-out
   registry (a published message reaches only clients registered for that `match_id`, plus any
-  client registered for "all matches"; a full client channel doesn't block delivery to others). An integration test brings up a
-  real Match Service and Redis (testcontainers, matching the pattern already used in
-  `match-service`'s integration tests) and exercises the three REST routes end-to-end through the
-  Gateway's gRPC client.
+  client registered for "all matches"; a full client channel doesn't block delivery to others). An
+  integration test builds and runs the real `match-service` binary as an OS subprocess (via `go
+  build` against its full package path, since its internals live under its own `internal/` tree
+  and are unreachable from the Gateway's) alongside testcontainers Postgres and Redis, then
+  exercises the three REST routes end-to-end against it through the Gateway's real REST server
+  over actual HTTP/gRPC.
 - SSE streaming itself is covered by a unit test using `httptest.NewRecorder` (a `http.Flusher`
   fake) asserting the handler writes one `event: update` frame per published Redis message, and
   by the manual `curl -N` check below - there is no automated way to assert on real browser

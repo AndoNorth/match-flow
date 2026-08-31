@@ -6,6 +6,8 @@ import (
 	"log/slog"
 
 	"github.com/redis/go-redis/v9"
+
+	"github.com/AndoNorth/match-flow/services/gateway-service/internal/resolver"
 )
 
 // Subscribe reads channel from rdb until ctx is cancelled, decoding
@@ -32,10 +34,10 @@ func Subscribe(ctx context.Context, rdb *redis.Client, channel string, registry 
 				logger.Warn("dropped malformed event", "error", err)
 				continue
 			}
-			payload, err := json.Marshal(map[string]any{
-				"type":     event.Type,
-				"sequence": event.Sequence,
-				"payload":  event.Payload,
+			payload, err := json.Marshal(resolver.EventBody{
+				Type:     event.Type,
+				Sequence: event.Sequence,
+				Payload:  event.Payload,
 			})
 			if err != nil {
 				logger.Warn("dropped unmarshalable event", "error", err, "match_id", event.MatchID)

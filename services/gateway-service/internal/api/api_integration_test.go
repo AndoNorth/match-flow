@@ -5,6 +5,8 @@ package api_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -30,7 +32,17 @@ import (
 // elsewhere). Driving the whole thing over the network is also more
 // faithful to production - the two services actually talk over the
 // network, never via a shared Go import.
-const matchServiceAddr = "http://localhost:19082"
+
+// freePort asks the OS for an unused TCP port by binding to port 0,
+// then immediately releasing it. A small TOCTOU race remains (another
+// process could grab the port before the subprocess binds it), but
+// that's an acceptable trade-off for this test suite.
+func freePort() int {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	Expect(err).NotTo(HaveOccurred())
+	defer func() { _ = l.Close() }()
+	return l.Addr().(*net.TCPAddr).Port
+}
 
 var _ = Describe("Gateway REST routes against a real Match Service process", func() {
 	It("round-trips a match end-to-end: Redis publish -> match-service -> gRPC -> Gateway REST", func() {
@@ -56,12 +68,15 @@ var _ = Describe("Gateway REST routes against a real Match Service process", fun
 
 		binPath := buildMatchServiceBinary(ctx)
 
+		port := freePort()
+		matchServiceAddr := fmt.Sprintf("http://127.0.0.1:%d", port)
+
 		//nolint:gosec // fixed argv, no user input; test-only subprocess
 		cmd := exec.CommandContext(ctx, binPath)
 		cmd.Env = append(os.Environ(),
 			"POSTGRES_DSN="+dsn,
 			"REDIS_URL="+redisConnStr,
-			"PORT=19082",
+			fmt.Sprintf("PORT=%d", port),
 			"MATCH_SERVICE_WORKERS=2",
 		)
 		cmd.Stdout = GinkgoWriter
@@ -97,7 +112,6 @@ var _ = Describe("Gateway REST routes against a real Match Service process", fun
 		}
 		payload, err := json.Marshal(event)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(redisClient.Publish(ctx, "matchflow:events", payload).Err()).NotTo(HaveOccurred())
 
 		client := matchclient.New(matchServiceAddr, http.DefaultClient)
 
@@ -107,8 +121,18 @@ var _ = Describe("Gateway REST routes against a real Match Service process", fun
 		gatewayServer := httptest.NewServer(gatewayMux)
 		DeferCleanup(gatewayServer.Close)
 
+		// Publishing is retried on every polling attempt rather than
+		// once: match-service's Redis subscription is a separate
+		// goroutine from its HTTP listener, so /healthz returning 200
+		// doesn't guarantee the subscription is live yet, and Redis
+		// pub/sub replays nothing to a subscriber that wasn't yet
+		// listening. Re-publishing the same event is safe - matchstate.
+		// Reduce skips any event whose Sequence isn't greater than the
+		// stored LastSequence, so a duplicate delivery is a no-op.
 		var body map[string]any
 		Eventually(func() int {
+			Expect(redisClient.Publish(ctx, "matchflow:events", payload).Err()).NotTo(HaveOccurred())
+
 			resp, err := http.Get(gatewayServer.URL + "/matches/match-1")
 			if err != nil {
 				return 0

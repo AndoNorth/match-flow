@@ -3,8 +3,11 @@ package realtime
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+
+	"github.com/danielgtaylor/huma/v2"
 
 	matchservicev1 "github.com/AndoNorth/match-flow/gen/go/matchflow/match_service/v1"
 	"github.com/AndoNorth/match-flow/services/gateway-service/internal/resolver"
@@ -35,14 +38,20 @@ func Handler(registry *Registry, client matchGetter) http.Handler {
 		w.Header().Set("Connection", "keep-alive")
 
 		matchID := r.URL.Query().Get("match_id")
-		if err := writeSnapshot(r.Context(), w, client, matchID); err != nil {
-			http.Error(w, err.Error(), http.StatusBadGateway)
-			return
-		}
-		flusher.Flush()
 
 		ch, unregister := registry.Register(matchID)
 		defer unregister()
+
+		if err := writeSnapshot(r.Context(), w, client, matchID); err != nil {
+			status := http.StatusInternalServerError
+			var statusErr huma.StatusError
+			if errors.As(resolver.HTTPError(err), &statusErr) {
+				status = statusErr.GetStatus()
+			}
+			http.Error(w, "failed to load match snapshot", status)
+			return
+		}
+		flusher.Flush()
 
 		ctx := r.Context()
 		for {

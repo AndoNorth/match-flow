@@ -82,6 +82,28 @@
               files = "^frontend/.*\\.(js|jsx|ts|tsx|json)$";
             };
 
+            typecheck-frontend = {
+              enable = true;
+              name = "typecheck frontend";
+              entry = builtins.toString (pkgs.writeShellScript "typecheck-frontend-hook" ''
+                cd frontend && ${pkgs.nodejs_22}/bin/npx tsc --noEmit
+              '');
+              language = "system";
+              pass_filenames = false;
+              files = "^frontend/.*\\.(ts|tsx)$";
+            };
+
+            fallow-audit = {
+              enable = true;
+              name = "fallow audit";
+              entry = builtins.toString (pkgs.writeShellScript "fallow-audit-hook" ''
+                cd frontend && node_modules/.bin/fallow audit
+              '');
+              language = "system";
+              pass_filenames = false;
+              files = "^frontend/.*\\.(js|jsx|ts|tsx|json)$";
+            };
+
             # Secret scanning, repo-wide
             gitleaks = {
               enable = true;

@@ -30,7 +30,7 @@ PORT_feed-simulator := 8080
 PORT_ingestion-service := 8081
 PORT_match-service := 8082
 PORT_gateway-service := 8083
-PORT_frontend := 3000
+PORT_frontend := 3001
 
 GO ?= go
 

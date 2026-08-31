@@ -175,8 +175,12 @@ convenience only, not how the shipped app loads either library).
   `lint` (and to `build`/`test`) that runs Biome, `tsc --noEmit`, and `fallow audit` instead of
   `golangci-lint`, keeping `make lint SVC=frontend` as the one command, consistent with every
   Go service.
-- `make run SVC=frontend` gets a matching case running `next dev` (default port `3000`, Next's
-  own default - distinct from the Gateway's `8083`). This is the port Playwright's tests target.
+- `make run SVC=frontend` gets a matching case running `next dev` on port `3001`, not Next's own
+  default `3000` - `otel-lgtm`'s Grafana UI already binds `3000` in local dev, and the collision
+  silently broke both the Gateway's CORS check (`GATEWAY_ALLOWED_ORIGIN` defaults to the
+  frontend's port) and a hardcoded Playwright `baseURL` when discovered during implementation.
+  Revisit once containerization (Phase 7) gives every service its own port mapping. This is the
+  port Playwright's tests target.
 - `tsc --noEmit`/`fallow audit` are also wired into `flake.nix`'s git-hooks.nix `pre-commit`
   stage, matching this repo's existing hook stage convention (no `pre-push` stage exists here).
 

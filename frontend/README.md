@@ -13,6 +13,12 @@ Requires the Gateway Service reachable (`make run SVC=gateway-service`), which
 in turn requires Redis, Postgres, and Match Service running - see the repo
 root [DEVELOPMENT.md](../docs/DEVELOPMENT.md).
 
+Serves on port `3001`, not Next's own default `3000` - `otel-lgtm`'s Grafana
+UI already binds `3000` in local dev (see [DEVELOPMENT.md](../docs/DEVELOPMENT.md#observability-while-developing)),
+and the two colliding meant Next silently fell back to a random port,
+breaking the Gateway's CORS check. Revisit once containerization
+(Phase 7) gives every service its own port mapping.
+
 ## Environment variables
 
 | Variable                    | Default                 | Description        |

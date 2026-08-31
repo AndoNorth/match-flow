@@ -173,11 +173,14 @@ Three pieces make that translation clean rather than ad hoc:
   (`NOT_FOUND`, `INVALID_ARGUMENT`, ...) maps to an HTTP status
   (`404`, `400`, ...) in one place, so every route doesn't hand-roll
   its own mapping.
-- **Service addresses via environment variable**, defaulting to a
-  Kubernetes-DNS-shaped hostname (e.g.
-  `match-service.matchflow.svc.cluster.local:<port>`) for the
-  in-cluster case, overridable for local dev (plain `localhost:<port>`
-  when running outside Kind/Tilt). One config surface, not a
+- **Service addresses via environment variable**, defaulting to plain
+  `localhost:<port>` for now - every other cross-service address in
+  this repo (`REDIS_URL`, `POSTGRES_DSN`) already defaults the same
+  way, since no service has run anywhere but locally or in the
+  Compose/Kind dev loops yet. A Kubernetes-DNS-shaped hostname (e.g.
+  `match-service.matchflow.svc.cluster.local:<port>`) becomes the
+  override once a real deployment manifest sets it (Phase 8, see
+  [ROADMAP.md](ROADMAP.md)) - one config surface either way, not a
   hardcoded address baked into either environment.
 
 ### Frontend Application

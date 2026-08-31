@@ -84,9 +84,12 @@ design):
 - [ingestion-service](services/ingestion-service/README.md) - receives
   events, validates and normalizes them into one canonical shape, and
   publishes them to Redis
+- [match-service](services/match-service/README.md) - subscribes to
+  Redis events, maintains match state in PostgreSQL, exposes read-only
+  REST
 
 `frontend/` doesn't have anything under it yet, and service
-names/boundaries beyond these two aren't locked in -
+names/boundaries beyond these three aren't locked in -
 [ARCHITECTURE.md](docs/ARCHITECTURE.md) describes responsibilities, not
 directory names.
 

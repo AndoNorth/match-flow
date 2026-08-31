@@ -53,7 +53,7 @@ Environment-lifecycle targets exist now: `make dev-setup`,
 infra as a Kind + Tilt K8s loop - see [Tiltfile](Tiltfile)). Per-service
 targets now exist: `make build/run/test/test-integration/lint SVC=<name>`
 (see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)). Services
-scaffolded so far: feed-simulator, ingestion-service. See
+scaffolded so far: feed-simulator, ingestion-service, match-service. See
 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the full list.
 
 ## Services
@@ -68,6 +68,9 @@ README for env vars, endpoints, and how to run it:
 - [ingestion-service](services/ingestion-service/README.md) - receives
   events, validates and normalizes them into one canonical shape, and
   publishes them to Redis
+- [match-service](services/match-service/README.md) - subscribes to
+  Redis events, maintains match state in PostgreSQL, exposes read-only
+  REST
 
 ## Documentation Map
 

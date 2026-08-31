@@ -16,8 +16,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	matchservicev1connect "github.com/AndoNorth/match-flow/gen/go/matchflow/match_service/v1/matchservicev1connect"
 	"github.com/AndoNorth/match-flow/services/match-service/internal/api"
 	"github.com/AndoNorth/match-flow/services/match-service/internal/eventstream"
+	"github.com/AndoNorth/match-flow/services/match-service/internal/grpcapi"
 	"github.com/AndoNorth/match-flow/services/match-service/internal/healthz"
 	"github.com/AndoNorth/match-flow/services/match-service/internal/matchstate"
 )
@@ -90,6 +92,9 @@ func main() {
 
 	humaAPI := humago.New(mux, huma.DefaultConfig("Match Service", "0.1.0"))
 	api.Register(humaAPI, store)
+
+	grpcPath, grpcHandler := matchservicev1connect.NewMatchServiceHandler(grpcapi.NewServer(store))
+	mux.Handle(grpcPath, grpcHandler)
 
 	port := envOr("PORT", defaultPort)
 	server := &http.Server{

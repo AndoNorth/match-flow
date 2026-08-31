@@ -35,7 +35,18 @@ migrations against Postgres at startup, exiting if either is unreachable.
 
 ## Endpoints
 
-- `GET /healthz` - returns 200 while the service is running.
+- `GET /healthz` - returns 200 while the service is running, independent of
+  Redis/Postgres reachability.
 
-Everything else is served by Huma - browse `GET /docs` or fetch
-`GET /openapi.json` for the current schema.
+Everything else is served by Huma - browse `GET /docs` (interactive UI) or
+fetch `GET /openapi.json` for the full, always-current schema, rather than a
+second, hand-maintained copy of the same thing here.
+
+- `GET /matches` - list matches, optional `?status=` filter.
+- `GET /matches/{id}` - a single match's current state. `404` for an unknown
+  match ID.
+- `GET /matches/{id}/events` - a match's full event timeline, ordered by
+  sequence. `404` for an unknown match ID.
+
+Nothing here creates or mutates a match - state comes entirely from the
+`matchflow:events` Redis channel Ingestion Service publishes to.

@@ -22,20 +22,30 @@ const (
 // domain.MatchState.
 type Football struct {
 	rng             *rand.Rand
+	homeTeam        string
+	awayTeam        string
 	kickoffEmitted  bool
 	halfTimeEmitted bool
 }
 
 func New(seed int64) *Football {
 	//nolint:gosec // seeded RNG for reproducible simulation
-	return &Football{rng: rand.New(rand.NewSource(seed))}
+	rng := rand.New(rand.NewSource(seed))
+	homeTeam, awayTeam := randomTeamNames(rng)
+	return &Football{rng: rng, homeTeam: homeTeam, awayTeam: awayTeam}
 }
 
 func (f *Football) NextEvent(state domain.MatchState) (domain.DomainEvent, bool, bool) {
 	switch {
 	case !f.kickoffEmitted:
 		f.kickoffEmitted = true
-		return domain.DomainEvent{Type: EventKickoff}, true, false
+		return domain.DomainEvent{
+			Type: EventKickoff,
+			Payload: map[string]any{
+				"home_team": f.homeTeam,
+				"away_team": f.awayTeam,
+			},
+		}, true, false
 
 	case state.ClockMins == 45 && !f.halfTimeEmitted: //nolint:mnd // half-time at minute 45
 		f.halfTimeEmitted = true

@@ -17,6 +17,8 @@ type MatchBody struct {
 	MatchID   string `json:"match_id"`
 	Sport     string `json:"sport"`
 	Status    string `json:"status"`
+	HomeTeam  string `json:"home_team"`
+	AwayTeam  string `json:"away_team"`
 	HomeScore int    `json:"home_score"`
 	AwayScore int    `json:"away_score"`
 	ClockMins int    `json:"clock_mins"`
@@ -40,6 +42,8 @@ func Match(m *matchservicev1.Match) MatchBody {
 		MatchID:   m.GetMatchId(),
 		Sport:     m.GetSport(),
 		Status:    m.GetStatus(),
+		HomeTeam:  m.GetHomeTeam(),
+		AwayTeam:  m.GetAwayTeam(),
 		HomeScore: int(m.GetHomeScore()),
 		AwayScore: int(m.GetAwayScore()),
 		ClockMins: int(m.GetClockMins()),

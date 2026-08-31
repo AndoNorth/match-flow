@@ -30,6 +30,8 @@ type Match struct {
 	HomeScore     int32                  `protobuf:"varint,4,opt,name=home_score,json=homeScore,proto3" json:"home_score,omitempty"`
 	AwayScore     int32                  `protobuf:"varint,5,opt,name=away_score,json=awayScore,proto3" json:"away_score,omitempty"`
 	ClockMins     int32                  `protobuf:"varint,6,opt,name=clock_mins,json=clockMins,proto3" json:"clock_mins,omitempty"`
+	HomeTeam      string                 `protobuf:"bytes,7,opt,name=home_team,json=homeTeam,proto3" json:"home_team,omitempty"`
+	AwayTeam      string                 `protobuf:"bytes,8,opt,name=away_team,json=awayTeam,proto3" json:"away_team,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -104,6 +106,20 @@ func (x *Match) GetClockMins() int32 {
 		return x.ClockMins
 	}
 	return 0
+}
+
+func (x *Match) GetHomeTeam() string {
+	if x != nil {
+		return x.HomeTeam
+	}
+	return ""
+}
+
+func (x *Match) GetAwayTeam() string {
+	if x != nil {
+		return x.AwayTeam
+	}
+	return ""
 }
 
 type MatchEvent struct {
@@ -390,7 +406,7 @@ var File_matchflow_match_service_v1_match_service_proto protoreflect.FileDescrip
 
 const file_matchflow_match_service_v1_match_service_proto_rawDesc = "" +
 	"\n" +
-	".matchflow/match_service/v1/match_service.proto\x12\x1amatchflow.match_service.v1\x1a\x1cgoogle/protobuf/struct.proto\"\xad\x01\n" +
+	".matchflow/match_service/v1/match_service.proto\x12\x1amatchflow.match_service.v1\x1a\x1cgoogle/protobuf/struct.proto\"\xe7\x01\n" +
 	"\x05Match\x12\x19\n" +
 	"\bmatch_id\x18\x01 \x01(\tR\amatchId\x12\x14\n" +
 	"\x05sport\x18\x02 \x01(\tR\x05sport\x12\x16\n" +
@@ -400,7 +416,9 @@ const file_matchflow_match_service_v1_match_service_proto_rawDesc = "" +
 	"\n" +
 	"away_score\x18\x05 \x01(\x05R\tawayScore\x12\x1d\n" +
 	"\n" +
-	"clock_mins\x18\x06 \x01(\x05R\tclockMins\"o\n" +
+	"clock_mins\x18\x06 \x01(\x05R\tclockMins\x12\x1b\n" +
+	"\thome_team\x18\a \x01(\tR\bhomeTeam\x12\x1b\n" +
+	"\taway_team\x18\b \x01(\tR\bawayTeam\"o\n" +
 	"\n" +
 	"MatchEvent\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x1a\n" +

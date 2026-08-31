@@ -18,6 +18,17 @@ var _ = Describe("Football", func() {
 		Expect(event.Type).To(Equal(football.EventKickoff))
 	})
 
+	It("kickoff payload carries two distinct, non-empty team names", func() {
+		f := football.New(4)
+		event, _, _ := f.NextEvent(domain.MatchState{ClockMins: 1})
+
+		homeTeam, _ := event.Payload["home_team"].(string)
+		awayTeam, _ := event.Payload["away_team"].(string)
+		Expect(homeTeam).NotTo(BeEmpty())
+		Expect(awayTeam).NotTo(BeEmpty())
+		Expect(homeTeam).NotTo(Equal(awayTeam))
+	})
+
 	It("emits half_time exactly once, at clock minute 45", func() {
 		f := football.New(2)
 		f.NextEvent(domain.MatchState{ClockMins: 1}) // consume kickoff

@@ -13,6 +13,8 @@ message Match {
   int32 home_score = 4;
   int32 away_score = 5;
   int32 clock_mins = 6;
+  string home_team = 7;
+  string away_team = 8;
 }
 
 message MatchEvent {

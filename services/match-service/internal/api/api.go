@@ -27,6 +27,8 @@ type matchBody struct {
 	MatchID   string `json:"match_id"`
 	Sport     string `json:"sport"`
 	Status    string `json:"status"`
+	HomeTeam  string `json:"home_team"`
+	AwayTeam  string `json:"away_team"`
 	HomeScore int    `json:"home_score"`
 	AwayScore int    `json:"away_score"`
 	ClockMins int    `json:"clock_mins"`
@@ -125,6 +127,7 @@ func Register(api huma.API, store reader) {
 func toMatchBody(r matchstate.MatchRecord) matchBody {
 	return matchBody{
 		MatchID: r.MatchID, Sport: r.Sport, Status: r.Status,
+		HomeTeam: r.HomeTeam, AwayTeam: r.AwayTeam,
 		HomeScore: r.HomeScore, AwayScore: r.AwayScore, ClockMins: r.ClockMins,
 	}
 }

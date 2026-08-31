@@ -26,7 +26,7 @@ export default async function MatchDetailPage({
 
   return (
     <main className="p-8">
-      <LiveMatchDetail initialMatch={match} initialEvents={events} />
+      <LiveMatchDetail key={id} initialMatch={match} initialEvents={events} />
     </main>
   );
 }

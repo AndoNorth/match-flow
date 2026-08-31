@@ -75,6 +75,9 @@ README for env vars, endpoints, and how to run it:
 - [gateway-service](services/gateway-service/README.md) - the entry
   point for client applications, proxying REST reads to Match Service
   over gRPC and re-emitting realtime updates over SSE
+- [frontend](frontend/README.md) - Next.js (App Router) client, the
+  only service the human-facing UI talks to, and it only talks to the
+  Gateway Service
 
 ## Documentation Map
 

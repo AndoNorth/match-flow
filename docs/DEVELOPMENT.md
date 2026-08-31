@@ -65,9 +65,13 @@ boundary rules:
 - `biome check` - TypeScript/JS formatting and linting for the frontend
   (`frontend/biome.json`, Biome's recommended rule set)
 - `gitleaks` - secret scanning on staged changes
-- `fallow` (dependency/dead-code audit) is planned alongside Biome once
-  the frontend has a `package.json` to audit - not wired into
-  `flake.nix` yet since there's nothing for it to check.
+- `fallow audit` - dependency/dead-code audit for the frontend, catching
+  unused dependencies and unreferenced exports now that there's a
+  `package.json` for it to check
+- `tsc --noEmit` - TypeScript type-checking for the frontend, run
+  against the installed `node_modules/.bin/tsc` rather than `npx` so a
+  missing `node_modules` fails loudly instead of `npx` silently
+  fetching an unrelated package
 
 **Semgrep - considered, not added.** It's only as good as its rule set,
 and a useful one is bespoke work (custom rules tuned to this codebase's

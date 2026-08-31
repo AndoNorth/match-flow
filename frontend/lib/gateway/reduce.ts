@@ -25,7 +25,7 @@ export function reduce(state: MatchBody, event: EventBody): MatchBody {
     case "status":
       return { ...state, status: rule.status };
     case "score":
-      return applyScoreEvent(state, event.payload);
+      return applyScoreEvent(state, event.payload ?? {});
     default:
       return state;
   }

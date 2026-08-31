@@ -86,7 +86,7 @@
               enable = true;
               name = "typecheck frontend";
               entry = builtins.toString (pkgs.writeShellScript "typecheck-frontend-hook" ''
-                cd frontend && ${pkgs.nodejs_22}/bin/npx tsc --noEmit
+                cd frontend && node_modules/.bin/tsc --noEmit
               '');
               language = "system";
               pass_filenames = false;

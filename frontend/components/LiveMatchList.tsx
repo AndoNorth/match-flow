@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { subscribeToMatches } from "@/lib/gateway/realtime";
 import { reduce } from "@/lib/gateway/reduce";
 import type { EventBody, MatchBody } from "@/lib/gateway/types";
@@ -29,6 +30,7 @@ export function LiveMatchList({
   );
   const [activeTab, setActiveTab] = useState<Tab>("Live");
   const [connected, setConnected] = useState(true);
+  const lastSequence = useRef<Record<string, number>>({});
 
   useEffect(() => {
     const unsubscribe = subscribeToMatches(
@@ -40,9 +42,11 @@ export function LiveMatchList({
       (event: EventBody) => {
         const matchId = event.match_id;
         if (!matchId) return;
+        if (event.sequence <= (lastSequence.current[matchId] ?? 0)) return;
         setMatches((prev) => {
           const current = prev[matchId];
           if (!current) return prev;
+          lastSequence.current[matchId] = event.sequence;
           return { ...prev, [matchId]: reduce(current, event) };
         });
       },
@@ -73,7 +77,7 @@ export function LiveMatchList({
       </div>
       <div className="flex flex-col gap-2">
         {visible.map((match) => (
-          <a
+          <Link
             key={match.match_id}
             href={`/matches/${match.match_id}`}
             className="card card-border bg-base-100"
@@ -84,7 +88,7 @@ export function LiveMatchList({
                 {match.home_score} - {match.away_score}
               </span>
             </div>
-          </a>
+          </Link>
         ))}
       </div>
     </div>

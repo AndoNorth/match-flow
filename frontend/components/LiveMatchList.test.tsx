@@ -72,6 +72,29 @@ describe("LiveMatchList", () => {
     expect(screen.getByText("2 - 0")).toBeInTheDocument();
   });
 
+  it("ignores a duplicate/lower-sequence update", () => {
+    render(<LiveMatchList initialMatches={[live]} />);
+    act(() => {
+      onUpdate({
+        type: "goal",
+        sequence: 1,
+        payload: { team: "home", minute: 15 },
+        match_id: "l1",
+      });
+    });
+    expect(screen.getByText("2 - 0")).toBeInTheDocument();
+    act(() => {
+      onUpdate({
+        type: "goal",
+        sequence: 1,
+        payload: { team: "home", minute: 15 },
+        match_id: "l1",
+      });
+    });
+    expect(screen.getByText("2 - 0")).toBeInTheDocument();
+    expect(screen.queryByText("3 - 0")).not.toBeInTheDocument();
+  });
+
   it("ignores an update for a match_id it doesn't know about", () => {
     render(<LiveMatchList initialMatches={[live]} />);
     act(() => {

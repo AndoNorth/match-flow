@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { subscribeToMatches } from "@/lib/gateway/realtime";
 import { reduce } from "@/lib/gateway/reduce";
 import type { EventBody, MatchBody } from "@/lib/gateway/types";
@@ -16,6 +16,9 @@ export function LiveMatchDetail({
   const [match, setMatch] = useState(initialMatch);
   const [events, setEvents] = useState(initialEvents);
   const [connected, setConnected] = useState(true);
+  const lastSequence = useRef(
+    initialEvents.reduce((max, event) => Math.max(max, event.sequence), 0),
+  );
 
   // match.match_id is stable for the life of this component - the
   // detail page always renders one fixed match.
@@ -25,6 +28,8 @@ export function LiveMatchDetail({
       match.match_id,
       (snapshot) => setMatch(snapshot as MatchBody),
       (event) => {
+        if (event.sequence <= lastSequence.current) return;
+        lastSequence.current = event.sequence;
         setMatch((prev) => reduce(prev, event));
         setEvents((prev) => [...prev, event]);
       },
@@ -44,20 +49,26 @@ export function LiveMatchDetail({
               {match.match_id}
             </span>
           </div>
-          <div className="flex items-center justify-center gap-6 my-3">
-            <span className="text-4xl font-extrabold tabular-nums">
+          <div
+            data-testid="score"
+            className="flex items-center justify-center gap-6 my-3"
+          >
+            <span
+              data-testid="home-score"
+              className="text-4xl font-extrabold tabular-nums"
+            >
               {match.home_score}
             </span>
             <span className="text-lg opacity-60 self-center">
               {match.clock_mins}'
             </span>
-            <span className="text-4xl font-extrabold tabular-nums">
+            <span
+              data-testid="away-score"
+              className="text-4xl font-extrabold tabular-nums"
+            >
               {match.away_score}
             </span>
           </div>
-          <span className="text-2xl font-bold tabular-nums self-center">
-            {match.home_score} - {match.away_score}
-          </span>
           <ul className="timeline timeline-vertical timeline-compact text-xs mt-2">
             {events.map((event) => (
               <li key={event.sequence}>{event.type}</li>

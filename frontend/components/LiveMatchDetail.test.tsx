@@ -33,8 +33,14 @@ beforeEach(() => {
 describe("LiveMatchDetail", () => {
   it("renders the initial score and timeline", () => {
     render(<LiveMatchDetail initialMatch={match} initialEvents={[kickoff]} />);
-    expect(screen.getByText("0 - 0")).toBeInTheDocument();
+    expect(screen.getByTestId("home-score")).toHaveTextContent("0");
+    expect(screen.getByTestId("away-score")).toHaveTextContent("0");
     expect(screen.getByText("kickoff")).toBeInTheDocument();
+  });
+
+  it("does not render the score twice", () => {
+    render(<LiveMatchDetail initialMatch={match} initialEvents={[kickoff]} />);
+    expect(screen.getAllByText("0")).toHaveLength(2);
   });
 
   it("applies a goal update to the score and appends it to the timeline", () => {
@@ -46,8 +52,23 @@ describe("LiveMatchDetail", () => {
         payload: { team: "home", minute: 23 },
       });
     });
-    expect(screen.getByText("1 - 0")).toBeInTheDocument();
+    expect(screen.getByTestId("home-score")).toHaveTextContent("1");
+    expect(screen.getByTestId("away-score")).toHaveTextContent("0");
     expect(screen.getByText("goal")).toBeInTheDocument();
+  });
+
+  it("ignores a duplicate/lower-sequence update", () => {
+    render(<LiveMatchDetail initialMatch={match} initialEvents={[kickoff]} />);
+    act(() => {
+      onUpdate({
+        type: "goal",
+        sequence: 1,
+        payload: { team: "home", minute: 23 },
+      });
+    });
+    expect(screen.getByTestId("home-score")).toHaveTextContent("0");
+    expect(screen.getByTestId("away-score")).toHaveTextContent("0");
+    expect(screen.queryByText("goal")).not.toBeInTheDocument();
   });
 
   it("shows the reconnecting indicator when the connection drops", () => {

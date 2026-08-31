@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import Redis from "ioredis";
-import { FIXTURE_MATCH_ID } from "./global-setup";
+
+const FIXTURE_MATCH_ID = process.env.E2E_MATCH_ID ?? "e2e-fixture-match";
 
 test("match list shows the seeded fixture match", async ({ page }) => {
   await page.goto("/");
@@ -11,7 +12,8 @@ test("a live update reaches the detail page without a reload", async ({
   page,
 }) => {
   await page.goto(`/matches/${FIXTURE_MATCH_ID}`);
-  await expect(page.getByText("0 - 0")).toBeVisible();
+  await expect(page.getByTestId("home-score")).toHaveText("0");
+  await expect(page.getByTestId("away-score")).toHaveText("0");
 
   const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
   const now = new Date().toISOString();
@@ -29,7 +31,8 @@ test("a live update reaches the detail page without a reload", async ({
   );
   await redis.quit();
 
-  await expect(page.getByText("1 - 0")).toBeVisible();
+  await expect(page.getByTestId("home-score")).toHaveText("1");
+  await expect(page.getByTestId("away-score")).toHaveText("0");
 });
 
 test("an unknown match ID renders a real 404", async ({ page }) => {

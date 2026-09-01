@@ -29,7 +29,13 @@ export default async function globalSetup() {
   process.env.E2E_MATCH_ID = fixtureMatchId;
 
   const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
-  await redis.publish(CHANNEL, canonicalEvent(fixtureMatchId, "kickoff", 1));
+  await redis.publish(
+    CHANNEL,
+    canonicalEvent(fixtureMatchId, "kickoff", 1, {
+      home_team: "E2E Fixture United",
+      away_team: "E2E Fixture City",
+    }),
+  );
   await redis.quit();
   // Give Match Service a moment to consume and persist the event
   // before any test's initial page load fetches it.

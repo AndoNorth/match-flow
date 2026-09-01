@@ -81,3 +81,31 @@ for how a template turns into an actual sequence of events). Two kinds:
 See `templates/goalless_draw.json`, `templates/goalless_yellow.json`,
 `templates/high_scoring_chaos.json`, and `templates/scripted_demo.json` for
 one example of each shape.
+
+## Controlling it with curl
+
+Every control endpoint takes a JSON body and needs
+`-H 'Content-Type: application/json'` - Huma rejects a POST body without it
+(plain `curl -d`, with no `-H`, defaults to
+`application/x-www-form-urlencoded` and gets a 415).
+
+```bash
+# list available templates
+curl -s http://localhost:8080/templates | jq
+
+# turn on the auto-respawn loop, default unbounded-random mode
+curl -s -X POST http://localhost:8080/control/start \
+  -H 'Content-Type: application/json' -d '{}'
+
+# turn on the auto-loop using a named template for every respawn
+curl -s -X POST http://localhost:8080/control/start \
+  -H 'Content-Type: application/json' -d '{"template": "high_scoring_chaos"}'
+
+# turn the auto-loop off and cancel every running match
+curl -s -X POST http://localhost:8080/control/stop \
+  -H 'Content-Type: application/json' -d '{}'
+
+# start one extra match right now, independent of the auto-loop
+curl -s -X POST http://localhost:8080/matches/trigger \
+  -H 'Content-Type: application/json' -d '{"template": "goalless_draw"}'
+```

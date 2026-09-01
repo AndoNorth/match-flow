@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { getMatch } from "@/lib/gateway/client";
 import { subscribeToMatches } from "@/lib/gateway/realtime";
 import { reduce } from "@/lib/gateway/reduce";
 import type { EventBody, MatchBody } from "@/lib/gateway/types";
@@ -47,6 +48,10 @@ export function LiveMatchList({
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [connected, setConnected] = useState(true);
   const lastSequence = useRef<Record<string, number>>({});
+  // Guards against firing getMatch more than once for the same
+  // newly-seen match while its fetch is still in flight - later
+  // events for it arrive well before a slow fetch resolves.
+  const fetchingMatches = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const unsubscribe = subscribeToMatches(
@@ -64,11 +69,24 @@ export function LiveMatchList({
         const matchId = event.match_id;
         if (!matchId) return;
         if (event.sequence <= (lastSequence.current[matchId] ?? 0)) return;
+        lastSequence.current[matchId] = event.sequence;
         setMatches((prev) => {
           const current = prev[matchId];
-          if (!current) return prev;
-          lastSequence.current[matchId] = event.sequence;
-          return { ...prev, [matchId]: reduce(current, event) };
+          if (current) return { ...prev, [matchId]: reduce(current, event) };
+          // A match started after this page's SSE connection opened -
+          // the Gateway only sends a full snapshot once, at connect
+          // time, so a match not in it has to be fetched directly
+          // rather than left to appear on the next page refresh.
+          if (!fetchingMatches.current.has(matchId)) {
+            fetchingMatches.current.add(matchId);
+            getMatch(matchId)
+              .then((match) => {
+                fetchingMatches.current.delete(matchId);
+                setMatches((p) => ({ ...p, [matchId]: match }));
+              })
+              .catch(() => fetchingMatches.current.delete(matchId));
+          }
+          return prev;
         });
       },
       setConnected,

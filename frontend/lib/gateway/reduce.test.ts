@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { reduce } from "./reduce";
+import { liveClockMins, reduce } from "./reduce";
 import type { MatchBody } from "./types";
 
 const base: MatchBody = {
@@ -75,5 +75,34 @@ describe("reduce", () => {
       payload: {},
     });
     expect(next).toEqual(live);
+  });
+});
+
+describe("liveClockMins", () => {
+  const kickoffAt = new Date(base.created_at).getTime();
+
+  it("stays at 0 for a scheduled match regardless of elapsed time", () => {
+    const scheduled = { ...base, status: "scheduled" as const };
+    expect(liveClockMins(scheduled, kickoffAt + 60_000)).toBe(0);
+  });
+
+  it("infers the elapsed minute for a live match, one minute per second", () => {
+    const live = { ...base, status: "live" as const, clock_mins: 0 };
+    expect(liveClockMins(live, kickoffAt + 30_000)).toBe(30);
+  });
+
+  it("never infers below the last known authoritative clock_mins", () => {
+    const live = { ...base, status: "live" as const, clock_mins: 50 };
+    expect(liveClockMins(live, kickoffAt + 10_000)).toBe(50);
+  });
+
+  it("caps inference at 90 minutes for a still-live match", () => {
+    const live = { ...base, status: "live" as const, clock_mins: 0 };
+    expect(liveClockMins(live, kickoffAt + 200_000)).toBe(90);
+  });
+
+  it("freezes at clock_mins once full_time, ignoring elapsed time", () => {
+    const finished = { ...base, status: "full_time" as const, clock_mins: 90 };
+    expect(liveClockMins(finished, kickoffAt + 500_000)).toBe(90);
   });
 });

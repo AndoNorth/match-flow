@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { subscribeToMatches } from "@/lib/gateway/realtime";
-import { eventMinute, reduce } from "@/lib/gateway/reduce";
+import { eventMinute, liveClockMins, reduce } from "@/lib/gateway/reduce";
 import type { EventBody, MatchBody } from "@/lib/gateway/types";
 import { ConnectionIndicator } from "./ConnectionIndicator";
 import { Navbar } from "./Navbar";
@@ -18,9 +18,17 @@ export function LiveMatchDetail({
   const [match, setMatch] = useState(initialMatch);
   const [events, setEvents] = useState(initialEvents);
   const [connected, setConnected] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
   const lastSequence = useRef(
     initialEvents.reduce((max, event) => Math.max(max, event.sequence), 0),
   );
+
+  // Ticks the live-inferred clock forward every second between real
+  // events - see liveClockMins for why this doesn't need a server push.
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   // match.match_id is stable for the life of this component - the
   // detail page always renders one fixed match.
@@ -78,7 +86,7 @@ export function LiveMatchDetail({
               </span>
             </div>
             <span className="text-lg opacity-60 self-center">
-              {match.clock_mins}'
+              {liveClockMins(match, now)}'
             </span>
             <div className="flex flex-col items-center gap-1">
               <span className="text-sm font-semibold truncate max-w-48">

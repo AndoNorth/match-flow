@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { getMatch } from "@/lib/gateway/client";
 import { subscribeToMatches } from "@/lib/gateway/realtime";
-import { reduce } from "@/lib/gateway/reduce";
+import { liveClockMins, reduce } from "@/lib/gateway/reduce";
 import type { EventBody, MatchBody } from "@/lib/gateway/types";
 import { ConnectionIndicator } from "./ConnectionIndicator";
 import { Navbar } from "./Navbar";
@@ -52,6 +52,14 @@ export function LiveMatchList({
   // newly-seen match while its fetch is still in flight - later
   // events for it arrive well before a slow fetch resolves.
   const fetchingMatches = useRef<Set<string>>(new Set());
+  const [now, setNow] = useState(() => Date.now());
+
+  // Ticks the live-inferred clock forward every second between real
+  // events - see liveClockMins for why this doesn't need a server push.
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     const unsubscribe = subscribeToMatches(
@@ -146,7 +154,7 @@ export function LiveMatchList({
               </div>
               <div className="flex items-center gap-4 shrink-0">
                 <span className="opacity-60 tabular-nums text-sm">
-                  {match.clock_mins}'
+                  {liveClockMins(match, now)}'
                 </span>
                 <span className="text-xl font-bold tabular-nums">
                   {match.home_score} - {match.away_score}

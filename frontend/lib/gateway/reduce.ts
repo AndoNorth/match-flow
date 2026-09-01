@@ -38,6 +38,28 @@ export function eventMinute(event: EventBody): number | undefined {
   return FIXED_MINUTE[event.type];
 }
 
+// Matches services/feed-simulator/cmd/feed-simulator/main.go's
+// tickInterval (1 real second per simulated match minute) and
+// football.go's fullTimeMinute - the engine never pauses the clock at
+// half_time, so this rate holds continuously from kickoff to 90'.
+const SECONDS_PER_MATCH_MINUTE = 1;
+const FULL_TIME_MINUTE = 90;
+
+// liveClockMins infers the current match minute purely from created_at
+// (set at kickoff) and the fixed simulator tick rate, so the displayed
+// clock can advance every second on the client without waiting for a
+// server event. Once a real event does arrive, state.clock_mins is the
+// authoritative floor - this only ever fills the gap between events,
+// never contradicts one already applied.
+export function liveClockMins(state: MatchBody, nowMs: number): number {
+  if (state.status === "scheduled" || state.status === "full_time") {
+    return state.clock_mins;
+  }
+  const elapsedSeconds = (nowMs - new Date(state.created_at).getTime()) / 1000;
+  const inferred = Math.floor(elapsedSeconds / SECONDS_PER_MATCH_MINUTE);
+  return Math.max(state.clock_mins, Math.min(FULL_TIME_MINUTE, inferred));
+}
+
 export function reduce(state: MatchBody, event: EventBody): MatchBody {
   const rule = RULES[event.type] ?? { category: "unknown" as const };
 

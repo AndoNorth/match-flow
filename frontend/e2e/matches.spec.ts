@@ -5,7 +5,11 @@ const FIXTURE_MATCH_ID = process.env.E2E_MATCH_ID ?? "e2e-fixture-match";
 
 test("match list shows the seeded fixture match", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText(FIXTURE_MATCH_ID)).toBeVisible();
+  // The list card shows team names, not match_id - the link href is the
+  // stable, display-independent way to identify a specific match row.
+  await expect(
+    page.locator(`a[href="/matches/${FIXTURE_MATCH_ID}"]`),
+  ).toBeVisible();
 });
 
 test("a live update reaches the detail page without a reload", async ({

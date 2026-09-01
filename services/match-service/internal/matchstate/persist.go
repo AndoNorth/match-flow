@@ -34,13 +34,20 @@ func (s *Store) Apply(ctx context.Context, item WorkItem) error {
 	}
 	defer func() { _ = tx.Rollback(ctx) }() // no-op after a successful Commit
 
+	// home_team/away_team only ever arrive on the kickoff event's
+	// payload - a match row is only ever created here, on its first
+	// event, which is always kickoff (see football.Football.NextEvent),
+	// so this is the only place team names are ever set. The ON
+	// CONFLICT no-op leaves them untouched on every later event.
+	homeTeam, awayTeam := teamNamesFromPayload(item.Event.Payload)
+
 	var state State
 	err = tx.QueryRow(ctx, `
-		INSERT INTO matches (match_id, sport)
-		VALUES ($1, $2)
+		INSERT INTO matches (match_id, sport, home_team, away_team)
+		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (match_id) DO UPDATE SET match_id = matches.match_id
 		RETURNING status, home_score, away_score, clock_mins, last_sequence
-	`, item.Event.MatchID, s.sport).Scan(
+	`, item.Event.MatchID, s.sport, homeTeam, awayTeam).Scan(
 		&state.Status, &state.HomeScore, &state.AwayScore, &state.ClockMins, &state.LastSequence,
 	)
 	if err != nil {
@@ -78,4 +85,13 @@ func (s *Store) Apply(ctx context.Context, item WorkItem) error {
 		return fmt.Errorf("commit tx: %w", err)
 	}
 	return nil
+}
+
+// teamNamesFromPayload reads home_team/away_team from a kickoff
+// event's payload - absent (empty string) for every other event type,
+// which is fine since they're only read on a match's first-ever INSERT.
+func teamNamesFromPayload(payload map[string]any) (home, away string) {
+	home, _ = payload["home_team"].(string)
+	away, _ = payload["away_team"].(string)
+	return home, away
 }

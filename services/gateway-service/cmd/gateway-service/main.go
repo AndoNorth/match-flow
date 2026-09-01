@@ -28,7 +28,7 @@ const (
 	defaultRedisURL      = "redis://localhost:6379"
 	defaultPort          = "8083"
 	defaultMatchAddr     = "localhost:8082"
-	defaultAllowedOrigin = "http://localhost:3000"
+	defaultAllowedOrigin = "http://localhost:3001"
 	matchflowEventsChan  = "matchflow:events"
 )
 

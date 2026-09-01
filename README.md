@@ -87,9 +87,14 @@ design):
 - [match-service](services/match-service/README.md) - subscribes to
   Redis events, maintains match state in PostgreSQL, exposes read-only
   REST
+- [gateway-service](services/gateway-service/README.md) - the entry
+  point for client applications, proxying REST reads to Match Service
+  over gRPC and re-emitting realtime updates over SSE
+- [frontend](frontend/README.md) - Next.js (App Router) client, the only
+  service the human-facing UI talks to, and it only talks to the Gateway
+  Service
 
-`frontend/` doesn't have anything under it yet, and service
-names/boundaries beyond these three aren't locked in -
+Service names/boundaries beyond these aren't locked in -
 [ARCHITECTURE.md](docs/ARCHITECTURE.md) describes responsibilities, not
 directory names.
 

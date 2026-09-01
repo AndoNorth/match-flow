@@ -30,6 +30,7 @@ PORT_feed-simulator := 8080
 PORT_ingestion-service := 8081
 PORT_match-service := 8082
 PORT_gateway-service := 8083
+PORT_frontend := 3001
 
 GO ?= go
 
@@ -40,22 +41,42 @@ check-service-port: ## Pre-flight port check for one service - make check-servic
 
 build: ## Build a service binary - make build SVC=<name>
 	@test -n "$(SVC)" || { echo "SVC=<name> is required"; exit 1; }
-	cd services/$(SVC)/cmd/$(SVC) && $(GO) build -o $(CURDIR)/bin/$(SVC) .
+	@if [ "$(SVC)" = "frontend" ]; then \
+		cd frontend && pnpm install --frozen-lockfile && pnpm build; \
+	else \
+		cd services/$(SVC)/cmd/$(SVC) && $(GO) build -o $(CURDIR)/bin/$(SVC) .; \
+	fi
 
 run: check-service-port ## Run a service with Air hot-reload - make run SVC=<name>
-	cd services/$(SVC)/cmd/$(SVC) && air -c $(CURDIR)/.air.toml
+	@if [ "$(SVC)" = "frontend" ]; then \
+		cd frontend && pnpm dev; \
+	else \
+		cd services/$(SVC)/cmd/$(SVC) && air -c $(CURDIR)/.air.toml; \
+	fi
 
 test: ## Run unit tests for a service - make test SVC=<name>
 	@test -n "$(SVC)" || { echo "SVC=<name> is required"; exit 1; }
-	$(GO) test ./services/$(SVC)/...
+	@if [ "$(SVC)" = "frontend" ]; then \
+		cd frontend && pnpm test; \
+	else \
+		$(GO) test ./services/$(SVC)/...; \
+	fi
 
 test-integration: check-docker ## Run integration tests for a service - make test-integration SVC=<name>
 	@test -n "$(SVC)" || { echo "SVC=<name> is required"; exit 1; }
-	$(GO) test -tags=integration ./services/$(SVC)/...
+	@if [ "$(SVC)" = "frontend" ]; then \
+		cd frontend && pnpm test:e2e; \
+	else \
+		$(GO) test -tags=integration ./services/$(SVC)/...; \
+	fi
 
 lint: ## Lint a service - make lint SVC=<name>
 	@test -n "$(SVC)" || { echo "SVC=<name> is required"; exit 1; }
-	golangci-lint run ./services/$(SVC)/...
+	@if [ "$(SVC)" = "frontend" ]; then \
+		cd frontend && pnpm lint; \
+	else \
+		golangci-lint run ./services/$(SVC)/...; \
+	fi
 
 gen-proto: ## Regenerate Go stubs from .proto files
 	buf generate

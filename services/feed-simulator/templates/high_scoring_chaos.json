@@ -1,0 +1,8 @@
+{
+  "name": "high_scoring_chaos",
+  "kind": "bounded",
+  "home_goals": { "min": 5, "max": 5 },
+  "away_goals": { "min": 5, "max": 5 },
+  "yellow_cards": { "min": 2, "max": 2 },
+  "red_cards": { "min": 3, "max": 3 }
+}

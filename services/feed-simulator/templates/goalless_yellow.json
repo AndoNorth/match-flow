@@ -1,0 +1,8 @@
+{
+  "name": "goalless_yellow",
+  "kind": "bounded",
+  "home_goals": { "min": 0, "max": 0 },
+  "away_goals": { "min": 0, "max": 0 },
+  "yellow_cards": { "min": 1, "max": 1 },
+  "red_cards": { "min": 0, "max": 0 }
+}

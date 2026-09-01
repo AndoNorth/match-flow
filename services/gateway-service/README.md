@@ -30,7 +30,7 @@ startup and exits if it's unreachable.
 | `PORT`                    | `8083`                    | HTTP port                                             |
 | `REDIS_URL`               | `redis://localhost:6379`  | Redis connection string                               |
 | `MATCH_SERVICE_ADDR`      | `localhost:8082`          | Match Service's gRPC address                          |
-| `GATEWAY_ALLOWED_ORIGIN`  | `http://localhost:3000`   | Origin allowed to call this service from a browser (`Access-Control-Allow-Origin`) - set to the frontend's real origin outside local dev |
+| `GATEWAY_ALLOWED_ORIGIN`  | `http://localhost:3001`   | Origin allowed to call this service from a browser (`Access-Control-Allow-Origin`) - set to the frontend's real origin outside local dev. `3001`, not Next's own default `3000`, since `otel-lgtm`'s Grafana already binds `3000` in local dev - revisit once containerization gives each service its own port mapping |
 
 ## Talking to Match Service
 

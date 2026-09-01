@@ -9,6 +9,7 @@ import (
 
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	matchservicev1 "github.com/AndoNorth/match-flow/gen/go/matchflow/match_service/v1"
 	"github.com/AndoNorth/match-flow/services/match-service/internal/matchstate"
@@ -95,8 +96,11 @@ func toProtoMatch(r matchstate.MatchRecord) *matchservicev1.Match {
 		MatchId:   r.MatchID,
 		Sport:     r.Sport,
 		Status:    r.Status,
+		HomeTeam:  r.HomeTeam,
+		AwayTeam:  r.AwayTeam,
 		HomeScore: int32(r.HomeScore), //nolint:gosec // score is always small and non-negative
 		AwayScore: int32(r.AwayScore), //nolint:gosec // score is always small and non-negative
 		ClockMins: int32(r.ClockMins), //nolint:gosec // clock minutes is always small and non-negative
+		CreatedAt: timestamppb.New(r.CreatedAt),
 	}
 }

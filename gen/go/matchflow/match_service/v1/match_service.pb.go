@@ -10,6 +10,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	structpb "google.golang.org/protobuf/types/known/structpb"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -30,6 +31,9 @@ type Match struct {
 	HomeScore     int32                  `protobuf:"varint,4,opt,name=home_score,json=homeScore,proto3" json:"home_score,omitempty"`
 	AwayScore     int32                  `protobuf:"varint,5,opt,name=away_score,json=awayScore,proto3" json:"away_score,omitempty"`
 	ClockMins     int32                  `protobuf:"varint,6,opt,name=clock_mins,json=clockMins,proto3" json:"clock_mins,omitempty"`
+	HomeTeam      string                 `protobuf:"bytes,7,opt,name=home_team,json=homeTeam,proto3" json:"home_team,omitempty"`
+	AwayTeam      string                 `protobuf:"bytes,8,opt,name=away_team,json=awayTeam,proto3" json:"away_team,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -104,6 +108,27 @@ func (x *Match) GetClockMins() int32 {
 		return x.ClockMins
 	}
 	return 0
+}
+
+func (x *Match) GetHomeTeam() string {
+	if x != nil {
+		return x.HomeTeam
+	}
+	return ""
+}
+
+func (x *Match) GetAwayTeam() string {
+	if x != nil {
+		return x.AwayTeam
+	}
+	return ""
+}
+
+func (x *Match) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
 }
 
 type MatchEvent struct {
@@ -390,7 +415,7 @@ var File_matchflow_match_service_v1_match_service_proto protoreflect.FileDescrip
 
 const file_matchflow_match_service_v1_match_service_proto_rawDesc = "" +
 	"\n" +
-	".matchflow/match_service/v1/match_service.proto\x12\x1amatchflow.match_service.v1\x1a\x1cgoogle/protobuf/struct.proto\"\xad\x01\n" +
+	".matchflow/match_service/v1/match_service.proto\x12\x1amatchflow.match_service.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa2\x02\n" +
 	"\x05Match\x12\x19\n" +
 	"\bmatch_id\x18\x01 \x01(\tR\amatchId\x12\x14\n" +
 	"\x05sport\x18\x02 \x01(\tR\x05sport\x12\x16\n" +
@@ -400,7 +425,11 @@ const file_matchflow_match_service_v1_match_service_proto_rawDesc = "" +
 	"\n" +
 	"away_score\x18\x05 \x01(\x05R\tawayScore\x12\x1d\n" +
 	"\n" +
-	"clock_mins\x18\x06 \x01(\x05R\tclockMins\"o\n" +
+	"clock_mins\x18\x06 \x01(\x05R\tclockMins\x12\x1b\n" +
+	"\thome_team\x18\a \x01(\tR\bhomeTeam\x12\x1b\n" +
+	"\taway_team\x18\b \x01(\tR\bawayTeam\x129\n" +
+	"\n" +
+	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"o\n" +
 	"\n" +
 	"MatchEvent\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x1a\n" +
@@ -442,23 +471,25 @@ var file_matchflow_match_service_v1_match_service_proto_goTypes = []any{
 	(*GetMatchRequest)(nil),         // 4: matchflow.match_service.v1.GetMatchRequest
 	(*ListMatchEventsRequest)(nil),  // 5: matchflow.match_service.v1.ListMatchEventsRequest
 	(*ListMatchEventsResponse)(nil), // 6: matchflow.match_service.v1.ListMatchEventsResponse
-	(*structpb.Struct)(nil),         // 7: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil),   // 7: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),         // 8: google.protobuf.Struct
 }
 var file_matchflow_match_service_v1_match_service_proto_depIdxs = []int32{
-	7, // 0: matchflow.match_service.v1.MatchEvent.payload:type_name -> google.protobuf.Struct
-	0, // 1: matchflow.match_service.v1.ListMatchesResponse.matches:type_name -> matchflow.match_service.v1.Match
-	1, // 2: matchflow.match_service.v1.ListMatchEventsResponse.events:type_name -> matchflow.match_service.v1.MatchEvent
-	2, // 3: matchflow.match_service.v1.MatchService.ListMatches:input_type -> matchflow.match_service.v1.ListMatchesRequest
-	4, // 4: matchflow.match_service.v1.MatchService.GetMatch:input_type -> matchflow.match_service.v1.GetMatchRequest
-	5, // 5: matchflow.match_service.v1.MatchService.ListMatchEvents:input_type -> matchflow.match_service.v1.ListMatchEventsRequest
-	3, // 6: matchflow.match_service.v1.MatchService.ListMatches:output_type -> matchflow.match_service.v1.ListMatchesResponse
-	0, // 7: matchflow.match_service.v1.MatchService.GetMatch:output_type -> matchflow.match_service.v1.Match
-	6, // 8: matchflow.match_service.v1.MatchService.ListMatchEvents:output_type -> matchflow.match_service.v1.ListMatchEventsResponse
-	6, // [6:9] is the sub-list for method output_type
-	3, // [3:6] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	7, // 0: matchflow.match_service.v1.Match.created_at:type_name -> google.protobuf.Timestamp
+	8, // 1: matchflow.match_service.v1.MatchEvent.payload:type_name -> google.protobuf.Struct
+	0, // 2: matchflow.match_service.v1.ListMatchesResponse.matches:type_name -> matchflow.match_service.v1.Match
+	1, // 3: matchflow.match_service.v1.ListMatchEventsResponse.events:type_name -> matchflow.match_service.v1.MatchEvent
+	2, // 4: matchflow.match_service.v1.MatchService.ListMatches:input_type -> matchflow.match_service.v1.ListMatchesRequest
+	4, // 5: matchflow.match_service.v1.MatchService.GetMatch:input_type -> matchflow.match_service.v1.GetMatchRequest
+	5, // 6: matchflow.match_service.v1.MatchService.ListMatchEvents:input_type -> matchflow.match_service.v1.ListMatchEventsRequest
+	3, // 7: matchflow.match_service.v1.MatchService.ListMatches:output_type -> matchflow.match_service.v1.ListMatchesResponse
+	0, // 8: matchflow.match_service.v1.MatchService.GetMatch:output_type -> matchflow.match_service.v1.Match
+	6, // 9: matchflow.match_service.v1.MatchService.ListMatchEvents:output_type -> matchflow.match_service.v1.ListMatchEventsResponse
+	7, // [7:10] is the sub-list for method output_type
+	4, // [4:7] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_matchflow_match_service_v1_match_service_proto_init() }

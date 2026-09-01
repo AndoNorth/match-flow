@@ -14,11 +14,15 @@ import (
 )
 
 // controller is the subset of *manager.Manager the routes need -
-// letting tests inject a fake instead of a real manager.
+// letting tests inject a fake instead of a real manager. Start/Trigger
+// deliberately take no context - a spawned match's lifetime must never
+// be tied to the HTTP request that asked for it (net/http cancels a
+// request's context the instant its handler returns), only to the
+// Manager's own long-lived base context, set once when it was built.
 type controller interface {
-	Start(ctx context.Context, templateName string) (string, error)
+	Start(templateName string) (string, error)
 	Stop()
-	Trigger(ctx context.Context, templateName string) (string, error)
+	Trigger(templateName string) (string, error)
 	RunningCount() int
 	TemplatesDir() string
 }
@@ -54,8 +58,8 @@ func Register(api huma.API, m controller) {
 		Method:      http.MethodPost,
 		Path:        "/control/start",
 		Summary:     "Turn on the auto-respawn loop, starting one match immediately if none are running",
-	}, func(ctx context.Context, in *templateInput) (*matchStartedOutput, error) {
-		matchID, err := m.Start(ctx, in.Body.Template)
+	}, func(_ context.Context, in *templateInput) (*matchStartedOutput, error) {
+		matchID, err := m.Start(in.Body.Template)
 		if err != nil {
 			return nil, huma.Error400BadRequest("failed to start", err)
 		}
@@ -81,8 +85,8 @@ func Register(api huma.API, m controller) {
 		Method:      http.MethodPost,
 		Path:        "/matches/trigger",
 		Summary:     "Start exactly one additional match right now, independent of the auto-loop",
-	}, func(ctx context.Context, in *templateInput) (*matchStartedOutput, error) {
-		matchID, err := m.Trigger(ctx, in.Body.Template)
+	}, func(_ context.Context, in *templateInput) (*matchStartedOutput, error) {
+		matchID, err := m.Trigger(in.Body.Template)
 		if err != nil {
 			return nil, huma.Error400BadRequest("failed to trigger match", err)
 		}

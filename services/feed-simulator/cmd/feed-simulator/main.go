@@ -62,13 +62,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	m := manager.New(routes, submitter, logger, absTemplatesDir, tickInterval)
+	// ctx (tied to process signals, not any one HTTP request) is the
+	// base every spawned match's lifetime derives from - see
+	// manager.New's doc comment for why that distinction matters.
+	m := manager.New(ctx, routes, submitter, logger, absTemplatesDir, tickInterval)
 
 	// Feeds live matches continuously by default, exactly as before
 	// this endpoint set existed - POST /control/stop turns it off,
 	// POST /control/start (optionally with a different template) turns
 	// it back on.
-	if _, err := m.Start(ctx, ""); err != nil {
+	if _, err := m.Start(""); err != nil {
 		logger.Error("initial match start failed", "error", err)
 		os.Exit(1)
 	}

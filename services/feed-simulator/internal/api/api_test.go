@@ -1,7 +1,6 @@
 package api_test
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"os"
@@ -27,7 +26,7 @@ type fakeController struct {
 	failTrigger       bool
 }
 
-func (f *fakeController) Start(_ context.Context, templateName string) (string, error) {
+func (f *fakeController) Start(templateName string) (string, error) {
 	f.startCalledWith = templateName
 	if f.failStart {
 		return "", errUnknownTemplate
@@ -39,7 +38,7 @@ func (f *fakeController) Stop() {
 	f.stopCalled = true
 }
 
-func (f *fakeController) Trigger(_ context.Context, templateName string) (string, error) {
+func (f *fakeController) Trigger(templateName string) (string, error) {
 	f.triggerCalledWith = templateName
 	if f.failTrigger {
 		return "", errUnknownTemplate

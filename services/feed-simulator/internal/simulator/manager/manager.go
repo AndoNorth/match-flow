@@ -26,9 +26,19 @@ import (
 // Start/Stop/Trigger/the auto-respawn callback all touch running and
 // auto/autoTemplate together, so every read or write to them happens
 // under the same lock.
+//
+// Every spawned match derives its context from baseCtx, set once at
+// construction - never from an HTTP handler's request context. A
+// request's context is canceled the instant its handler returns, so a
+// match parented on one would die (and, if auto-respawn was on,
+// immediately spawn its replacement from that same already-canceled
+// context) within microseconds of the response being sent - a tight
+// respawn loop bounded only by CPU speed, discovered exactly this way
+// against a real running instance.
 type Manager struct {
 	logger       *slog.Logger
 	submitter    simulator.Submitter
+	baseCtx      context.Context
 	running      map[string]context.CancelFunc
 	autoTemplate string
 	templatesDir string
@@ -39,11 +49,16 @@ type Manager struct {
 	auto         bool
 }
 
-// New builds a Manager. tickInterval is production's real per-minute
-// tick rate (domain.NewRealTicker(tickInterval)) - tests pass a much
-// smaller duration so a 90-minute match plays out in milliseconds, not
-// 90 real seconds.
+// New builds a Manager. baseCtx is the service's own long-lived
+// lifetime context (e.g. one tied to process signals in main) - every
+// match Start/Trigger spawns, and every auto-respawned replacement,
+// derives from it, so a match's lifetime is never tied to whichever
+// HTTP request happened to ask for it. tickInterval is production's
+// real per-minute tick rate (domain.NewRealTicker(tickInterval)) -
+// tests pass a much smaller duration so a 90-minute match plays out in
+// milliseconds, not 90 real seconds.
 func New(
+	baseCtx context.Context,
 	routes []simulator.ProviderRoute,
 	submitter simulator.Submitter,
 	logger *slog.Logger,
@@ -51,6 +66,7 @@ func New(
 	tickInterval time.Duration,
 ) *Manager {
 	return &Manager{
+		baseCtx:      baseCtx,
 		running:      make(map[string]context.CancelFunc),
 		routes:       routes,
 		submitter:    submitter,
@@ -72,7 +88,7 @@ func (m *Manager) RunningCount() int {
 // default, unbounded-random mode). If nothing is currently running, it
 // also spawns the first match immediately - calling Start again just
 // changes the template future respawns use.
-func (m *Manager) Start(ctx context.Context, templateName string) (string, error) {
+func (m *Manager) Start(templateName string) (string, error) {
 	m.mu.Lock()
 	m.auto = true
 	m.autoTemplate = templateName
@@ -82,7 +98,7 @@ func (m *Manager) Start(ctx context.Context, templateName string) (string, error
 	if !needsSpawn {
 		return "", nil
 	}
-	return m.spawn(ctx, templateName)
+	return m.spawn(templateName)
 }
 
 // Stop turns the auto-respawn loop off and immediately cancels every
@@ -107,18 +123,18 @@ func (m *Manager) Stop() {
 // concurrently alongside anything else already in progress, using
 // templateName ("" for the default random mode). Independent of
 // Start/Stop's auto-loop state.
-func (m *Manager) Trigger(ctx context.Context, templateName string) (string, error) {
-	return m.spawn(ctx, templateName)
+func (m *Manager) Trigger(templateName string) (string, error) {
+	return m.spawn(templateName)
 }
 
-func (m *Manager) spawn(parentCtx context.Context, templateName string) (string, error) {
+func (m *Manager) spawn(templateName string) (string, error) {
 	sport, err := m.buildSport(templateName)
 	if err != nil {
 		return "", err
 	}
 
 	matchID := fmt.Sprintf("match-%d", m.nextID.Add(1))
-	matchCtx, cancel := context.WithCancel(parentCtx)
+	matchCtx, cancel := context.WithCancel(m.baseCtx)
 
 	m.mu.Lock()
 	m.running[matchID] = cancel
@@ -130,7 +146,7 @@ func (m *Manager) spawn(parentCtx context.Context, templateName string) (string,
 
 	go func() {
 		runner.Run(matchCtx)
-		m.onComplete(parentCtx, matchID)
+		m.onComplete(matchID)
 	}()
 
 	return matchID, nil
@@ -139,17 +155,21 @@ func (m *Manager) spawn(parentCtx context.Context, templateName string) (string,
 // onComplete removes matchID from running and, if the auto-loop is
 // still on, immediately spawns its replacement - this is what makes
 // Start's "keep feeding live matches forever" promise actually hold.
-func (m *Manager) onComplete(parentCtx context.Context, matchID string) {
+func (m *Manager) onComplete(matchID string) {
 	m.mu.Lock()
 	delete(m.running, matchID)
 	shouldRespawn := m.auto
 	nextTemplate := m.autoTemplate
 	m.mu.Unlock()
 
-	if !shouldRespawn {
+	// Also guards against respawning from an already-canceled baseCtx
+	// during service shutdown - the same tight-loop failure mode this
+	// package exists to avoid, just triggered by the process exiting
+	// instead of by a request context.
+	if !shouldRespawn || m.baseCtx.Err() != nil {
 		return
 	}
-	if _, err := m.spawn(parentCtx, nextTemplate); err != nil {
+	if _, err := m.spawn(nextTemplate); err != nil {
 		m.logger.Error("auto-respawn failed", "error", err, "template", nextTemplate)
 	}
 }

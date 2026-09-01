@@ -1,0 +1,11 @@
+{
+  "name": "scripted_demo",
+  "kind": "literal",
+  "events": [
+    { "type": "goal", "team": "home", "minute": 10 },
+    { "type": "half_time", "minute": 45 },
+    { "type": "goal", "team": "away", "minute": 60 },
+    { "type": "card", "team": "away", "card_type": "yellow", "minute": 75 },
+    { "type": "full_time", "minute": 90 }
+  ]
+}
